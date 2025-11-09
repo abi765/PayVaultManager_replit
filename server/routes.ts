@@ -2,7 +2,16 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth } from "./auth";
-import { insertEmployeeSchema, insertSalaryPaymentSchema } from "@shared/schema";
+import { 
+  insertEmployeeSchema, 
+  insertSalaryPaymentSchema,
+  insertDeductionSchema,
+  insertAllowanceSchema,
+  insertEmployeeDeductionSchema,
+  insertEmployeeAllowanceSchema,
+  insertOvertimeRecordSchema,
+  insertLocationLogSchema,
+} from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -263,6 +272,292 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employeeId = parseInt(req.params.id);
       const payments = await storage.getSalaryPaymentsByEmployee(employeeId);
       res.json(payments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/deductions", requireAuth, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const result = await storage.getDeductions({ limit, offset });
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/deductions", requireAuth, async (req, res) => {
+    try {
+      const validation = insertDeductionSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const deduction = await storage.createDeduction(validation.data);
+      res.status(201).json(deduction);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/deductions/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validation = insertDeductionSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const deduction = await storage.updateDeduction(id, validation.data);
+      if (!deduction) {
+        return res.status(404).json({ message: "Deduction not found" });
+      }
+      res.json(deduction);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/deductions/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteDeduction(id);
+      if (!success) {
+        return res.status(404).json({ message: "Deduction not found" });
+      }
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/allowances", requireAuth, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const result = await storage.getAllowances({ limit, offset });
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/allowances", requireAuth, async (req, res) => {
+    try {
+      const validation = insertAllowanceSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const allowance = await storage.createAllowance(validation.data);
+      res.status(201).json(allowance);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/allowances/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validation = insertAllowanceSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const allowance = await storage.updateAllowance(id, validation.data);
+      if (!allowance) {
+        return res.status(404).json({ message: "Allowance not found" });
+      }
+      res.json(allowance);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/allowances/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteAllowance(id);
+      if (!success) {
+        return res.status(404).json({ message: "Allowance not found" });
+      }
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/employees/:id/deductions", requireAuth, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const deductions = await storage.getEmployeeDeductions(employeeId);
+      res.json(deductions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/employees/:id/deductions", requireAuth, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const validation = insertEmployeeDeductionSchema.safeParse({ ...req.body, employeeId });
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const employeeDeduction = await storage.createEmployeeDeduction(validation.data);
+      res.status(201).json(employeeDeduction);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/employees/:employeeId/deductions/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEmployeeDeduction(id);
+      if (!success) {
+        return res.status(404).json({ message: "Employee deduction not found" });
+      }
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/employees/:id/allowances", requireAuth, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const allowances = await storage.getEmployeeAllowances(employeeId);
+      res.json(allowances);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/employees/:id/allowances", requireAuth, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const validation = insertEmployeeAllowanceSchema.safeParse({ ...req.body, employeeId });
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const employeeAllowance = await storage.createEmployeeAllowance(validation.data);
+      res.status(201).json(employeeAllowance);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/employees/:employeeId/allowances/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEmployeeAllowance(id);
+      if (!success) {
+        return res.status(404).json({ message: "Employee allowance not found" });
+      }
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/overtime", requireAuth, async (req, res) => {
+    try {
+      const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      const month = req.query.month as string | undefined;
+      const records = await storage.getOvertimeRecords({ employeeId, month });
+      res.json(records);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/overtime", requireAuth, async (req, res) => {
+    try {
+      const validation = insertOvertimeRecordSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const record = await storage.createOvertimeRecord(validation.data);
+      res.status(201).json(record);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/overtime/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validation = insertOvertimeRecordSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const record = await storage.updateOvertimeRecord(id, validation.data);
+      if (!record) {
+        return res.status(404).json({ message: "Overtime record not found" });
+      }
+      res.json(record);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/overtime/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteOvertimeRecord(id);
+      if (!success) {
+        return res.status(404).json({ message: "Overtime record not found" });
+      }
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/salary/:id/breakdown", requireAuth, async (req, res) => {
+    try {
+      const salaryPaymentId = parseInt(req.params.id);
+      const breakdown = await storage.getSalaryBreakdown(salaryPaymentId);
+      res.json(breakdown);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/salary/calculate", requireAuth, async (req, res) => {
+    try {
+      const { employeeId, month } = req.body;
+      if (!employeeId || !month) {
+        return res.status(400).json({ message: "employeeId and month are required" });
+      }
+      const calculation = await storage.calculateSalary(employeeId, month);
+      res.json(calculation);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/location", requireAuth, async (req, res) => {
+    try {
+      const validation = insertLocationLogSchema.safeParse({
+        ...req.body,
+        timestamp: req.body.timestamp ? new Date(req.body.timestamp) : new Date(),
+      });
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const log = await storage.createLocationLog(validation.data);
+      res.status(201).json(log);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/location", requireAuth, async (req, res) => {
+    try {
+      const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const logs = await storage.getLocationLogs({ employeeId, limit });
+      res.json(logs);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
