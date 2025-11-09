@@ -227,7 +227,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/salary/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validation = insertSalaryPaymentSchema.partial().safeParse(req.body);
+      const data = req.body;
+      
+      // Convert paymentDate string to Date object if present
+      if (data.paymentDate && typeof data.paymentDate === 'string') {
+        data.paymentDate = new Date(data.paymentDate);
+      }
+      
+      const validation = insertSalaryPaymentSchema.partial().safeParse(data);
       
       if (!validation.success) {
         return res.status(400).json({ 
