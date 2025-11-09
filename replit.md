@@ -38,6 +38,9 @@ Preferred communication style: Simple, everyday language.
 - Dashboard with statistics cards and activity feed
 - Employee CRUD operations with Pakistani bank integration
 - Salary payment tracking and generation
+- Overtime tracking with configurable hourly rates
+- Settings management for deductions and allowances
+- User management with role-based access control
 - Form validation using react-hook-form with Zod resolvers
 - Toast notifications for user feedback
 
@@ -60,6 +63,10 @@ Preferred communication style: Simple, everyday language.
 - Dashboard: `/api/dashboard/stats`
 - Employees: `/api/employees` (GET, POST, PUT, DELETE)
 - Salary: `/api/salary`, `/api/salary/generate`
+- Deductions: `/api/deductions` (GET, POST, PUT, DELETE)
+- Allowances: `/api/allowances` (GET, POST, PUT, DELETE)
+- Overtime: `/api/overtime` (GET, POST, DELETE)
+- Users: `/api/users` (GET, POST, DELETE)
 
 **Authentication & Authorization**
 - Simple user-based authentication (no JWT, uses localStorage)

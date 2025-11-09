@@ -1,4 +1,4 @@
-import { Home, Users, DollarSign, Settings, LogOut, User } from "lucide-react";
+import { Home, Users, DollarSign, Clock, Settings, LogOut, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +33,11 @@ const menuItems = [
     icon: DollarSign,
   },
   {
+    title: "Overtime",
+    url: "/overtime",
+    icon: Clock,
+  },
+  {
     title: "Settings",
     url: "/settings",
     icon: Settings,
@@ -40,7 +45,7 @@ const menuItems = [
   {
     title: "Users",
     url: "/users",
-    icon: Users,
+    icon: User,
   },
 ];
 

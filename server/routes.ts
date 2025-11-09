@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { requireAuth } from "./auth";
+import { requireAuth, requireRole } from "./auth";
 import { 
   insertUserSchema,
   insertEmployeeSchema, 
@@ -41,7 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ user: req.user });
   });
 
-  app.get("/api/users", requireAuth, async (req, res) => {
+  app.get("/api/users", requireAuth, requireRole("admin"), async (req, res) => {
     try {
       const users = await storage.getUsers();
       res.json(users);
@@ -50,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/users", requireAuth, async (req, res) => {
+  app.post("/api/users", requireAuth, requireRole("admin"), async (req, res) => {
     try {
       const validation = insertUserSchema.safeParse(req.body);
       if (!validation.success) {
@@ -71,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/users/:id", requireAuth, async (req, res) => {
+  app.delete("/api/users/:id", requireAuth, requireRole("admin"), async (req, res) => {
     try {
       const id = req.params.id;
       const success = await storage.deleteUser(id);
@@ -135,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/employees", requireAuth, async (req, res) => {
+  app.post("/api/employees", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const validation = insertEmployeeSchema.safeParse(req.body);
       if (!validation.success) {
@@ -161,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/employees/:id", requireAuth, async (req, res) => {
+  app.put("/api/employees/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validation = insertEmployeeSchema.partial().safeParse(req.body);
@@ -198,7 +198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/employees/:id", requireAuth, async (req, res) => {
+  app.delete("/api/employees/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteEmployee(id);
@@ -213,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/salary/generate", requireAuth, async (req, res) => {
+  app.post("/api/salary/generate", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const { month } = req.body;
       if (!month) {
@@ -277,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/salary/:id", requireAuth, async (req, res) => {
+  app.put("/api/salary/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const data = req.body;
@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/deductions", requireAuth, async (req, res) => {
+  app.post("/api/deductions", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const validation = insertDeductionSchema.safeParse(req.body);
       if (!validation.success) {
@@ -345,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/deductions/:id", requireAuth, async (req, res) => {
+  app.put("/api/deductions/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validation = insertDeductionSchema.partial().safeParse(req.body);
@@ -362,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/deductions/:id", requireAuth, async (req, res) => {
+  app.delete("/api/deductions/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteDeduction(id);
@@ -386,7 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/allowances", requireAuth, async (req, res) => {
+  app.post("/api/allowances", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const validation = insertAllowanceSchema.safeParse(req.body);
       if (!validation.success) {
@@ -399,7 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/allowances/:id", requireAuth, async (req, res) => {
+  app.put("/api/allowances/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validation = insertAllowanceSchema.partial().safeParse(req.body);
@@ -416,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/allowances/:id", requireAuth, async (req, res) => {
+  app.delete("/api/allowances/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteAllowance(id);
@@ -439,7 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/employees/:id/deductions", requireAuth, async (req, res) => {
+  app.post("/api/employees/:id/deductions", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const employeeId = parseInt(req.params.id);
       const validation = insertEmployeeDeductionSchema.safeParse({ ...req.body, employeeId });
@@ -453,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/employees/:employeeId/deductions/:id", requireAuth, async (req, res) => {
+  app.delete("/api/employees/:employeeId/deductions/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteEmployeeDeduction(id);
@@ -476,7 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/employees/:id/allowances", requireAuth, async (req, res) => {
+  app.post("/api/employees/:id/allowances", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const employeeId = parseInt(req.params.id);
       const validation = insertEmployeeAllowanceSchema.safeParse({ ...req.body, employeeId });
@@ -490,7 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/employees/:employeeId/allowances/:id", requireAuth, async (req, res) => {
+  app.delete("/api/employees/:employeeId/allowances/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteEmployeeAllowance(id);
@@ -514,7 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/overtime", requireAuth, async (req, res) => {
+  app.post("/api/overtime", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const validation = insertOvertimeRecordSchema.safeParse(req.body);
       if (!validation.success) {
@@ -527,7 +527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/overtime/:id", requireAuth, async (req, res) => {
+  app.put("/api/overtime/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validation = insertOvertimeRecordSchema.partial().safeParse(req.body);
@@ -544,7 +544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/overtime/:id", requireAuth, async (req, res) => {
+  app.delete("/api/overtime/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteOvertimeRecord(id);
@@ -567,7 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/salary/calculate", requireAuth, async (req, res) => {
+  app.post("/api/salary/calculate", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const { employeeId, month } = req.body;
       if (!employeeId || !month) {
@@ -580,7 +580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/location", requireAuth, async (req, res) => {
+  app.post("/api/location", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const validation = insertLocationLogSchema.safeParse({
         ...req.body,
