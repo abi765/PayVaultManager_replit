@@ -180,7 +180,7 @@ function CreateUserDialog({
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof createUserSchema>) => {
-      return await apiRequest("/api/users", "POST", data);
+      return await apiRequest("POST", "/api/users", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
