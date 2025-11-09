@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import logoImage from "@assets/generated_images/PayVault_app_icon_logo_4053ec67.png";
 
 const menuItems = [
@@ -38,6 +39,8 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ currentPath = "/" }: AppSidebarProps) {
+  const { logout } = useAuth();
+
   return (
     <Sidebar>
       <SidebarHeader className="p-6">
@@ -82,7 +85,7 @@ export function AppSidebar({ currentPath = "/" }: AppSidebarProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => console.log("Logout clicked")}
+            onClick={logout}
             data-testid="button-logout"
             aria-label="Logout"
           >

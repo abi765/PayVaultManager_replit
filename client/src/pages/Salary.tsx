@@ -1,131 +1,101 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import SalaryTable from "@/components/SalaryTable";
 import { SalaryPayment, Employee } from "@shared/schema";
 import { format } from "date-fns";
-
-const mockPayments: (SalaryPayment & { employee?: Employee })[] = [
-  {
-    id: 1,
-    employeeId: 1,
-    amount: 85000,
-    paymentDate: new Date("2024-01-15"),
-    month: "2024-01",
-    status: "paid",
-    paymentMethod: "Bank Transfer",
-    notes: null,
-    createdAt: new Date(),
-    employee: {
-      id: 1,
-      employeeId: "EMP001",
-      fullName: "Ahmed Khan",
-      address: null,
-      bankAccountNumber: "12345678901234",
-      iban: null,
-      bankName: "HBL",
-      bankBranch: null,
-      salary: 85000,
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  },
-  {
-    id: 2,
-    employeeId: 2,
-    amount: 95000,
-    paymentDate: null,
-    month: "2024-01",
-    status: "pending",
-    paymentMethod: null,
-    notes: null,
-    createdAt: new Date(),
-    employee: {
-      id: 2,
-      employeeId: "EMP002",
-      fullName: "Fatima Ali",
-      address: null,
-      bankAccountNumber: "98765432109876",
-      iban: null,
-      bankName: "Meezan Bank",
-      bankBranch: null,
-      salary: 95000,
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  },
-  {
-    id: 3,
-    employeeId: 3,
-    amount: 72000,
-    paymentDate: new Date("2024-01-16"),
-    month: "2024-01",
-    status: "paid",
-    paymentMethod: "Bank Transfer",
-    notes: null,
-    createdAt: new Date(),
-    employee: {
-      id: 3,
-      employeeId: "EMP003",
-      fullName: "Hassan Malik",
-      address: null,
-      bankAccountNumber: "11223344556677",
-      iban: null,
-      bankName: "UBL",
-      bankBranch: null,
-      salary: 72000,
-      status: "on_leave",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  },
-  {
-    id: 4,
-    employeeId: 4,
-    amount: 105000,
-    paymentDate: null,
-    month: "2024-01",
-    status: "pending",
-    paymentMethod: null,
-    notes: null,
-    createdAt: new Date(),
-    employee: {
-      id: 4,
-      employeeId: "EMP004",
-      fullName: "Sara Ahmed",
-      address: null,
-      bankAccountNumber: "55667788990011",
-      iban: null,
-      bankName: "Bank Alfalah",
-      bankBranch: null,
-      salary: 105000,
-      status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  },
-];
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Salary() {
-  const [selectedMonth] = useState(format(new Date(), "yyyy-MM"));
+  const { toast } = useToast();
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [payments] = useState(mockPayments);
 
-  const filteredPayments = payments.filter((payment) => {
-    if (statusFilter !== "all" && payment.status !== statusFilter) return false;
-    return true;
+  const queryParams = new URLSearchParams({
+    limit: "50",
+    offset: "0",
+    ...(selectedMonth && { month: selectedMonth }),
+    ...(statusFilter !== "all" && { status: statusFilter }),
+  });
+
+  const queryKey = ["/api/salary", `?${queryParams.toString()}`];
+
+  const { data: payments = [], isLoading } = useQuery<(SalaryPayment & { employee?: Employee })[]>({
+    queryKey,
+  });
+
+  const generateSalaryMutation = useMutation({
+    mutationFn: async (month: string) => {
+      const res = await apiRequest("POST", "/api/salary/generate", { month });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salary"] });
+      toast({
+        title: "Salary generated",
+        description: "Salary has been successfully generated for all active employees.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to generate salary",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async (payment: SalaryPayment) => {
+      const res = await apiRequest("PUT", `/api/salary/${payment.id}`, {
+        status: "paid",
+        paymentDate: new Date().toISOString(),
+        paymentMethod: "Bank Transfer",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salary"] });
+      toast({
+        title: "Payment marked as paid",
+        description: "The salary payment has been successfully marked as paid.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to mark as paid",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const handleGenerateSalary = () => {
-    console.log("Generating salary for month:", selectedMonth);
+    generateSalaryMutation.mutate(selectedMonth);
   };
 
   const handleMarkPaid = (payment: SalaryPayment) => {
-    console.log("Marking as paid:", payment);
+    markPaidMutation.mutate(payment);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Salary Management</h1>
+            <p className="text-muted-foreground">Manage employee salary payments and records</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading salary records...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -134,15 +104,20 @@ export default function Salary() {
           <h1 className="text-2xl font-bold">Salary Management</h1>
           <p className="text-muted-foreground">Manage employee salary payments and records</p>
         </div>
-        <Button onClick={handleGenerateSalary} data-testid="button-generate-salary" className="gap-2">
+        <Button 
+          onClick={handleGenerateSalary} 
+          data-testid="button-generate-salary" 
+          className="gap-2"
+          disabled={generateSalaryMutation.isPending}
+        >
           <Plus className="h-4 w-4" />
-          Generate Salary
+          {generateSalaryMutation.isPending ? "Generating..." : "Generate Salary"}
         </Button>
       </div>
 
       <div className="flex flex-wrap gap-4">
         <div className="w-full sm:w-auto sm:min-w-[200px]">
-          <Select value={selectedMonth} onValueChange={() => {}}>
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
             <SelectTrigger data-testid="select-month">
               <SelectValue placeholder="Select month" />
             </SelectTrigger>
@@ -169,7 +144,7 @@ export default function Salary() {
         </div>
       </div>
 
-      <SalaryTable salaryPayments={filteredPayments} onMarkPaid={handleMarkPaid} />
+      <SalaryTable salaryPayments={payments} onMarkPaid={handleMarkPaid} />
     </div>
   );
 }

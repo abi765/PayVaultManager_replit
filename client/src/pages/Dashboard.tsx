@@ -1,13 +1,29 @@
+import { useQuery } from "@tanstack/react-query";
 import StatCard from "@/components/StatCard";
 import { Users, DollarSign, Clock, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Dashboard() {
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   const recentActivities = [
-    { id: 1, action: "Salary generated for January 2024", time: "2 hours ago" },
-    { id: 2, action: "New employee added: Ahmed Khan (EMP001)", time: "5 hours ago" },
-    { id: 3, action: "Payment marked as paid: Fatima Ali", time: "1 day ago" },
-    { id: 4, action: "Employee status updated: Hassan Malik to On Leave", time: "2 days ago" },
+    { id: 1, action: "Salary generated for current month", time: "2 hours ago" },
+    { id: 2, action: `New employee added to system`, time: "5 hours ago" },
+    { id: 3, action: "Payment marked as paid", time: "1 day ago" },
+    { id: 4, action: "Employee status updated", time: "2 days ago" },
   ];
 
   return (
@@ -20,25 +36,25 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Employees"
-          value="124"
-          subtitle="118 active, 6 inactive"
+          value={stats?.totalEmployees || 0}
+          subtitle={`${stats?.activeEmployees || 0} active, ${stats?.inactiveEmployees || 0} inactive`}
           icon={Users}
         />
         <StatCard
           title="Monthly Payroll"
-          value="PKR 8.5M"
+          value={`PKR ${((stats?.monthlyPayroll || 0) / 1000000).toFixed(1)}M`}
           subtitle="Total for active employees"
           icon={DollarSign}
         />
         <StatCard
           title="Pending Payments"
-          value="23"
+          value={stats?.pendingPayments || 0}
           subtitle="For current month"
           icon={Clock}
         />
         <StatCard
           title="This Month"
-          value="PKR 2.1M"
+          value={`PKR ${((stats?.processedPayments || 0) / 1000000).toFixed(1)}M`}
           subtitle="Processed payments"
           icon={TrendingUp}
         />

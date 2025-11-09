@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
@@ -15,92 +16,46 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-const mockEmployees: Employee[] = [
-  {
-    id: 1,
-    employeeId: "EMP001",
-    fullName: "Ahmed Khan",
-    address: "123 Main St, Karachi",
-    bankAccountNumber: "12345678901234",
-    iban: "PK36SCBL0000001123456702",
-    bankName: "Habib Bank Limited (HBL)",
-    bankBranch: "Karachi Branch",
-    salary: 85000,
-    status: "active",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 2,
-    employeeId: "EMP002",
-    fullName: "Fatima Ali",
-    address: "456 Park Ave, Lahore",
-    bankAccountNumber: "98765432109876",
-    iban: "PK89MEZN0003190123456789",
-    bankName: "Meezan Bank",
-    bankBranch: "Lahore Branch",
-    salary: 95000,
-    status: "active",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 3,
-    employeeId: "EMP003",
-    fullName: "Hassan Malik",
-    address: null,
-    bankAccountNumber: "11223344556677",
-    iban: null,
-    bankName: "United Bank Limited (UBL)",
-    bankBranch: null,
-    salary: 72000,
-    status: "on_leave",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 4,
-    employeeId: "EMP004",
-    fullName: "Sara Ahmed",
-    address: "789 Garden Rd, Islamabad",
-    bankAccountNumber: "55667788990011",
-    iban: "PK12ALFH0000098765432109",
-    bankName: "Bank Alfalah",
-    bankBranch: "Islamabad Branch",
-    salary: 105000,
-    status: "active",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 5,
-    employeeId: "EMP005",
-    fullName: "Ali Raza",
-    address: null,
-    bankAccountNumber: "22334455667788",
-    iban: null,
-    bankName: "MCB Bank Limited",
-    bankBranch: null,
-    salary: 68000,
-    status: "inactive",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [employees] = useState<Employee[]>(mockEmployees);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | undefined>();
+  const { toast } = useToast();
 
-  const filteredEmployees = employees.filter((emp) =>
-    emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const queryKey = searchTerm 
+    ? ["/api/employees", `?limit=100&offset=0&search=${encodeURIComponent(searchTerm)}`]
+    : ["/api/employees", "?limit=100&offset=0"];
+
+  const { data: employees = [], isLoading } = useQuery<Employee[]>({
+    queryKey,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/employees/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      toast({
+        title: "Employee deleted",
+        description: "The employee has been successfully deleted.",
+      });
+      setDeleteDialogOpen(false);
+      setEmployeeToDelete(undefined);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleAdd = () => {
     setSelectedEmployee(undefined);
@@ -118,10 +73,26 @@ export default function Employees() {
   };
 
   const confirmDelete = () => {
-    console.log("Deleting employee:", employeeToDelete);
-    setDeleteDialogOpen(false);
-    setEmployeeToDelete(undefined);
+    if (employeeToDelete) {
+      deleteMutation.mutate(employeeToDelete.id);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Employees</h1>
+            <p className="text-muted-foreground">Manage employee records and information</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading employees...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -148,7 +119,7 @@ export default function Employees() {
       </div>
 
       <EmployeeTable
-        employees={filteredEmployees}
+        employees={employees}
         onView={(emp) => console.log("View:", emp)}
         onEdit={handleEdit}
         onDelete={handleDelete}
@@ -158,10 +129,6 @@ export default function Employees() {
         open={formOpen}
         onOpenChange={setFormOpen}
         employee={selectedEmployee}
-        onSave={(data) => {
-          console.log("Saved:", data);
-          setFormOpen(false);
-        }}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -174,8 +141,12 @@ export default function Employees() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} data-testid="button-confirm-delete">
-              Delete
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              data-testid="button-confirm-delete"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

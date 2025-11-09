@@ -5,28 +5,103 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PAKISTANI_BANKS } from "@/lib/constants";
-import { useState } from "react";
-import { Employee } from "@shared/schema";
+import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Employee, insertEmployeeSchema } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface EmployeeFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee?: Employee;
-  onSave?: (data: any) => void;
 }
 
-export default function EmployeeFormModal({ open, onOpenChange, employee, onSave }: EmployeeFormModalProps) {
+export default function EmployeeFormModal({ open, onOpenChange, employee }: EmployeeFormModalProps) {
+  const { toast } = useToast();
   const [showCustomBank, setShowCustomBank] = useState(false);
   const [formData, setFormData] = useState({
-    employeeId: employee?.employeeId || "",
-    fullName: employee?.fullName || "",
-    address: employee?.address || "",
-    bankAccountNumber: employee?.bankAccountNumber || "",
-    iban: employee?.iban || "",
-    bankName: employee?.bankName || "",
-    bankBranch: employee?.bankBranch || "",
-    salary: employee?.salary?.toString() || "",
-    status: employee?.status || "active",
+    employeeId: "",
+    fullName: "",
+    address: "",
+    bankAccountNumber: "",
+    iban: "",
+    bankName: "",
+    bankBranch: "",
+    salary: "",
+    status: "active" as "active" | "on_leave" | "inactive",
+  });
+
+  useEffect(() => {
+    if (open && employee) {
+      setFormData({
+        employeeId: employee.employeeId || "",
+        fullName: employee.fullName || "",
+        address: employee.address || "",
+        bankAccountNumber: employee.bankAccountNumber || "",
+        iban: employee.iban || "",
+        bankName: employee.bankName || "",
+        bankBranch: employee.bankBranch || "",
+        salary: employee.salary?.toString() || "",
+        status: employee.status || "active",
+      });
+    } else if (open && !employee) {
+      setFormData({
+        employeeId: "",
+        fullName: "",
+        address: "",
+        bankAccountNumber: "",
+        iban: "",
+        bankName: "",
+        bankBranch: "",
+        salary: "",
+        status: "active",
+      });
+    }
+  }, [open, employee]);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/employees", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      toast({
+        title: "Employee created",
+        description: "The employee has been successfully added.",
+      });
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create employee",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/employees/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+      toast({
+        title: "Employee updated",
+        description: "The employee has been successfully updated.",
+      });
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update employee",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const handleBankChange = (value: string) => {
@@ -41,9 +116,31 @@ export default function EmployeeFormModal({ open, onOpenChange, employee, onSave
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Submitting employee form:", formData);
-    onSave?.(formData);
+    
+    try {
+      const validatedData = insertEmployeeSchema.parse({
+        ...formData,
+        salary: Number(formData.salary),
+        address: formData.address || null,
+        iban: formData.iban || null,
+        bankBranch: formData.bankBranch || null,
+      });
+
+      if (employee) {
+        updateMutation.mutate({ id: employee.id, data: validatedData });
+      } else {
+        createMutation.mutate(validatedData);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Validation error",
+        description: error.errors?.[0]?.message || "Please check your input",
+        variant: "destructive",
+      });
+    }
   };
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -187,11 +284,11 @@ export default function EmployeeFormModal({ open, onOpenChange, employee, onSave
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-testid="button-cancel">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-testid="button-cancel" disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" data-testid="button-save">
-              {employee ? "Update Employee" : "Add Employee"}
+            <Button type="submit" data-testid="button-save" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : (employee ? "Update Employee" : "Add Employee")}
             </Button>
           </div>
         </form>
