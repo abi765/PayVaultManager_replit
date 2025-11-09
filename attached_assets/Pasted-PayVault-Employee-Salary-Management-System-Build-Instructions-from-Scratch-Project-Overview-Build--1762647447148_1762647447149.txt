@@ -1,0 +1,316 @@
+PayVault - Employee Salary Management System
+Build Instructions from Scratch
+Project Overview
+Build a Progressive Web App (PWA) for managing employee salary records with offline capabilities, specifically designed for Pakistani businesses.
+Core Features Required
+1. Employee Management
+Add, edit, view, and delete employee records
+Required fields:
+Employee ID (unique identifier)
+Full Name
+Bank Account Number (minimum 8 digits, digits only)
+Bank Name (dropdown with Pakistani banks + custom option)
+Monthly Salary in PKR (Pakistani Rupees)
+Status (Active/On Leave/Inactive)
+Optional fields:
+Address (textarea)
+IBAN (International Bank Account Number - Pakistani format: PK + 2 digits + 20 characters)
+Bank Branch
+2. Pakistani Banks Dropdown
+Include these banks in the dropdown:
+Allied Bank Limited (ABL)
+Askari Bank
+Bank Alfalah
+Bank Al-Habib
+BankIslami Pakistan
+Dubai Islamic Bank
+Faysal Bank
+Habib Bank Limited (HBL)
+Habib Metropolitan Bank
+JS Bank
+MCB Bank Limited
+Meezan Bank
+National Bank of Pakistan (NBP)
+Samba Bank
+Silk Bank
+Soneri Bank
+Standard Chartered Bank Pakistan
+Summit Bank
+The Bank of Punjab
+United Bank Limited (UBL)
+"Custom (Enter manually)" option - when selected, show text input field
+3. Salary Management
+Generate monthly salary records for all active employees
+Track salary payment status (Pending/Paid/Failed)
+Record payment date and method
+View salary history for each employee
+Generate salary slips (optional PDF export)
+4. Authentication System
+User login/logout with JWT tokens
+Session persistence (store token in localStorage)
+Protected routes (redirect to login if not authenticated)
+Role-based access (admin/manager/viewer)
+5. Offline Functionality (PWA)
+Service Worker for offline caching
+IndexedDB for local data storage
+Sync queue for operations performed offline
+Auto-sync when connection is restored
+Show connection status indicator (Connected/Disconnected)
+6. PWA Installation
+Web app manifest with proper icons (72x72, 96x96, 128x128, 144x144, 152x152, 192x192, 384x384, 512x512)
+Install button with browser-specific instructions
+Standalone display mode
+Theme color: #4F46E5 (Indigo)
+Technical Stack
+Frontend
+Framework: React 18+ with Vite
+Routing: React Router v6
+State Management: React Context API
+HTTP Client: Axios
+Styling: CSS3 with custom styles (no framework required)
+PWA: Workbox for service worker generation
+Backend
+Framework: Python Flask (v3.0+)
+Database ORM: SQLAlchemy
+Authentication: Flask-JWT-Extended
+CORS: Flask-CORS
+Database: PostgreSQL (production), SQLite (development)
+Environment: Python 3.10+
+Deployment
+Platform: Render.com (both frontend and backend)
+Database: Render PostgreSQL (managed service)
+Database Schema
+Users Table
+- id (INTEGER, PRIMARY KEY)
+- username (STRING, UNIQUE, NOT NULL)
+- password_hash (STRING, NOT NULL)
+- email (STRING, UNIQUE)
+- role (STRING, DEFAULT 'viewer')
+- created_at (DATETIME, UTC)
+Employees Table
+- id (INTEGER, PRIMARY KEY)
+- employee_id (STRING, UNIQUE, NOT NULL)
+- full_name (STRING, NOT NULL)
+- address (TEXT)
+- bank_account_number (STRING)
+- iban (STRING, max 34 chars)
+- bank_name (STRING)
+- bank_branch (STRING)
+- salary (FLOAT, NOT NULL)
+- status (STRING, DEFAULT 'active')
+- created_at (DATETIME, UTC)
+- updated_at (DATETIME, UTC)
+Salary Payments Table
+- id (INTEGER, PRIMARY KEY)
+- employee_id (INTEGER, FOREIGN KEY → employees.id)
+- amount (FLOAT, NOT NULL)
+- payment_date (DATETIME)
+- month (STRING, format: 'YYYY-MM')
+- status (STRING: pending/paid/failed)
+- payment_method (STRING)
+- notes (TEXT)
+- created_at (DATETIME, UTC)
+API Endpoints Required
+Authentication
+POST   /api/auth/login          - Login user
+POST   /api/auth/register       - Register new user
+GET    /api/auth/me             - Get current user info
+POST   /api/auth/logout         - Logout user
+Employees
+GET    /api/employees           - List all employees (with pagination)
+POST   /api/employees           - Create new employee
+GET    /api/employees/:id       - Get employee details
+PUT    /api/employees/:id       - Update employee
+DELETE /api/employees/:id       - Delete employee
+GET    /api/employees/check-duplicate - Check duplicate bank account
+Salary
+POST   /api/salary/generate     - Generate salary for month
+GET    /api/salary              - List all salary records (with filters)
+GET    /api/salary/:id          - Get salary record details
+PUT    /api/salary/:id          - Update salary record (mark as paid, etc.)
+GET    /api/salary/employee/:id - Get salary history for employee
+Dashboard/Stats
+GET    /api/dashboard/stats     - Get dashboard statistics
+Form Validation Rules
+Employee Form
+Employee ID: Required, must be unique
+Full Name: Required, minimum 2 characters
+Bank Account Number:
+Required
+Minimum 8 characters
+Only digits allowed
+Check for duplicates (show warning if already exists)
+Bank Name: Required (from dropdown or custom input)
+Salary: Required, must be greater than 0
+IBAN (optional):
+If provided, validate Pakistani format
+Auto-uppercase transformation
+Max 34 characters
+UI/UX Requirements
+Layout
+Header with app name, user info, logout button
+Sidebar/navigation menu:
+Dashboard
+Employees
+Salary Management
+Reports (optional)
+Main content area
+Connection status indicator (top-right corner)
+Dashboard
+Display cards showing:
+Total Employees (with active/inactive breakdown)
+Total Monthly Payroll (sum of all active employee salaries)
+Pending Payments (this month)
+Recent Activities
+Employee List
+Table view with columns: ID, Name, Bank, Salary, Status
+Search/filter functionality
+Pagination (20 items per page)
+"Add Employee" button (opens modal)
+Actions: View, Edit, Delete (with confirmation)
+Salary Management
+Month/Year selector
+"Generate Salary" button (creates records for all active employees)
+List of salary records with filters (status, employee, date range)
+Mark as Paid functionality
+Export options (CSV/PDF)
+Modals
+Employee Add/Edit modal with all form fields
+Salary details modal
+Confirmation dialogs for delete actions
+Styling Guidelines
+Color scheme: Indigo primary (#4F46E5), white backgrounds
+Clean, modern design
+Responsive (mobile, tablet, desktop)
+Loading states for async operations
+Error messages in red
+Success messages in green
+Form validation errors shown inline
+Offline Features Implementation
+Service Worker Strategy
+Cache-First: Static assets (HTML, CSS, JS, images, icons)
+Network-First: API calls (with fallback to cache)
+Queue Failed Requests: Store failed POST/PUT/DELETE in IndexedDB
+Background Sync: Retry queued requests when online
+IndexedDB Stores
+- employees (cache employee data)
+- salaryRecords (cache salary data)
+- syncQueue (pending operations)
+- appState (connection status, last sync time)
+Sync Queue Structure
+{
+  id: timestamp,
+  type: 'CREATE' | 'UPDATE' | 'DELETE',
+  endpoint: '/api/employees',
+  data: { employee data },
+  status: 'pending' | 'syncing' | 'failed',
+  retryCount: 0,
+  createdAt: timestamp
+}
+Environment Variables
+Frontend (.env)
+VITE_API_URL=http://localhost:5000/api          # Development
+# VITE_API_URL=https://your-api.onrender.com/api # Production
+Backend (.env)
+FLASK_APP=app.py
+FLASK_ENV=development
+SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-jwt-secret-here
+DATABASE_URL=sqlite:///payvault.db                                    # Development
+# DATABASE_URL=postgresql://user:pass@host:5432/dbname                # Production
+CORS_ORIGINS=http://localhost:3000,https://your-frontend.onrender.com
+Deployment Instructions
+Backend (Render.com)
+Create new Web Service
+Connect GitHub repository
+Build command: pip install -r requirements.txt
+Start command: gunicorn app:app
+Add environment variables (DATABASE_URL, SECRET_KEY, etc.)
+Set Python version to 3.10+
+Frontend (Render.com)
+Create new Static Site
+Build command: npm install && npm run build
+Publish directory: dist
+Add environment variable: VITE_API_URL
+Add rewrite rule: /* → /index.html (for client-side routing)
+Database (Render.com)
+Create PostgreSQL database
+Copy internal database URL
+Add to backend environment variables
+Testing Checklist
+Functional Testing
+ User can register and login
+ User can add employee with all required fields
+ Bank dropdown shows all Pakistani banks
+ Custom bank option works correctly
+ Form validation prevents invalid submissions
+ Duplicate bank account shows warning
+ User can edit employee information
+ User can delete employee (with confirmation)
+ Salary generation creates records for all active employees
+ Salary status can be updated (mark as paid)
+ Dashboard shows correct statistics
+PWA Testing
+ Service worker registers successfully
+ App works offline (view cached data)
+ Offline operations are queued
+ Queued operations sync when online
+ Install prompt appears on supported browsers
+ App installs successfully on mobile/desktop
+ Icons display correctly when installed
+ Connection status indicator updates correctly
+Cross-Browser Testing
+ Chrome/Edge (desktop)
+ Safari (desktop & iOS)
+ Firefox (desktop)
+ Mobile browsers (Chrome, Safari on iOS)
+Security Considerations
+Password Hashing: Use bcrypt with salt rounds ≥ 10
+JWT Tokens: Set reasonable expiration (24 hours)
+Input Validation: Server-side validation for all inputs
+SQL Injection: Use parameterized queries (SQLAlchemy ORM handles this)
+XSS Prevention: Sanitize user inputs, React handles this by default
+CORS: Only allow specific origins
+HTTPS: Enforce in production
+Environment Secrets: Never commit .env files
+Performance Optimization
+Frontend:
+Code splitting (lazy load routes)
+Image optimization (compress icons)
+Debounce search inputs
+Virtual scrolling for large lists (optional)
+Backend:
+Database indexing (employee_id, bank_account_number)
+Query optimization (use joins instead of multiple queries)
+Response pagination
+Caching frequently accessed data (optional)
+PWA:
+Precache critical resources
+Cache API responses with TTL
+Lazy load non-critical features
+Optional Enhancements
+Reports & Analytics:
+Monthly payroll reports
+Employee salary trends
+Export to Excel/PDF
+Notifications:
+Push notifications for salary generation
+Email notifications for payment confirmations
+Multi-language Support:
+English/Urdu language toggle
+Audit Trail:
+Log all CRUD operations
+Track who made changes and when
+Backup & Recovery:
+Automated database backups
+Export/import functionality
+Deliverables
+Source code (GitHub repository)
+Documentation:
+README with setup instructions
+API documentation
+User manual
+Deployment URLs (frontend + backend)
+Database schema diagram
+Test credentials for demo
+This specification should give a developer everything needed to build PayVault from scratch with all the features currently implemented, plus the context for Pakistani business requirements.
