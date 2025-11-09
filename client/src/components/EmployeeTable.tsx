@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Edit, Trash2, Eye } from "lucide-react";
 import { EMPLOYEE_STATUS } from "@/lib/constants";
+import { formatPKR } from "@/lib/utils";
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -46,7 +47,7 @@ export default function EmployeeTable({ employees, onView, onEdit, onDelete }: E
                   {employee.bankName || "-"}
                 </TableCell>
                 <TableCell data-testid={`text-employee-salary-${employee.id}`}>
-                  {employee.salary.toLocaleString()}
+                  {formatPKR(employee.salary)}
                 </TableCell>
                 <TableCell>
                   <Badge

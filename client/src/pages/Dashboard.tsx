@@ -2,9 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 import StatCard from "@/components/StatCard";
 import { Users, DollarSign, Clock, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatPKRCompact } from "@/lib/utils";
+
+interface DashboardStats {
+  totalEmployees: number;
+  activeEmployees: number;
+  inactiveEmployees: number;
+  monthlyPayroll: number;
+  pendingPayments: number;
+  processedPayments: number;
+}
 
 export default function Dashboard() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
   });
 
@@ -42,7 +52,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Monthly Payroll"
-          value={`PKR ${((stats?.monthlyPayroll || 0) / 1000000).toFixed(1)}M`}
+          value={formatPKRCompact(stats?.monthlyPayroll || 0)}
           subtitle="Total for active employees"
           icon={DollarSign}
         />
@@ -54,7 +64,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="This Month"
-          value={`PKR ${((stats?.processedPayments || 0) / 1000000).toFixed(1)}M`}
+          value={formatPKRCompact(stats?.processedPayments || 0)}
           subtitle="Processed payments"
           icon={TrendingUp}
         />

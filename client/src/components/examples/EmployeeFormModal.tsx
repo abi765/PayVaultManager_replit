@@ -13,10 +13,6 @@ export default function EmployeeFormModalExample() {
       <EmployeeFormModal
         open={open}
         onOpenChange={setOpen}
-        onSave={(data) => {
-          console.log("Saved:", data);
-          setOpen(false);
-        }}
       />
     </div>
   );

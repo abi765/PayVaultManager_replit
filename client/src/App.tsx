@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/pages/Dashboard";
 import Employees from "@/pages/Employees";
 import Salary from "@/pages/Salary";
@@ -13,19 +12,20 @@ import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import ThemeToggle from "@/components/ThemeToggle";
 import ConnectionIndicator from "@/components/ConnectionIndicator";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
-function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
+function ProtectedRoute({ component: Component, ...rest }: { component: any; path?: string }) {
   const { user, isLoading } = useAuth();
-  
+
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
-  
+
   if (!user) {
     return <Redirect to="/login" />;
   }
-  
-  return <Component />;
+
+  return <Component {...rest} />;
 }
 
 function Router() {
@@ -34,35 +34,26 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/">
-        {() => <ProtectedRoute component={Dashboard} />}
-      </Route>
-      <Route path="/employees">
-        {() => <ProtectedRoute component={Employees} />}
-      </Route>
-      <Route path="/salary">
-        {() => <ProtectedRoute component={Salary} />}
-      </Route>
+      <Route path="/">{() => <ProtectedRoute component={Dashboard} />}</Route>
+      <Route path="/employees">{() => <ProtectedRoute component={Employees} />}</Route>
+      <Route path="/salary">{() => <ProtectedRoute component={Salary} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-function AppContent() {
+function AppLayout() {
   const [location] = useLocation();
   const { user } = useAuth();
+
+  if (!user || location === "/login") {
+    return <Router />;
+  }
+
   const style = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
   };
-
-  if (location === "/login") {
-    return <Router />;
-  }
-
-  if (!user) {
-    return <Router />;
-  }
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
@@ -90,7 +81,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
-          <AppContent />
+          <AppLayout />
           <Toaster />
         </TooltipProvider>
       </AuthProvider>

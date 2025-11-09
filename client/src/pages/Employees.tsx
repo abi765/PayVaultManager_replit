@@ -6,6 +6,8 @@ import { Plus, Search } from "lucide-react";
 import EmployeeTable from "@/components/EmployeeTable";
 import EmployeeFormModal from "@/components/EmployeeFormModal";
 import { Employee } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,23 +18,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Employees() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | undefined>();
-  const { toast } = useToast();
 
-  const queryKey = searchTerm 
-    ? ["/api/employees", `?limit=100&offset=0&search=${encodeURIComponent(searchTerm)}`]
-    : ["/api/employees", "?limit=100&offset=0"];
-
-  const { data: employees = [], isLoading } = useQuery<Employee[]>({
-    queryKey,
+  const { data, isLoading } = useQuery<{ employees: Employee[]; total: number }>({
+    queryKey: ["/api/employees", searchTerm],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append("search", searchTerm);
+      const response = await fetch(`/api/employees?${params}`, {
+        headers: {
+          "x-user-id": localStorage.getItem("userId") || "",
+        },
+      });
+      return response.json();
+    },
   });
 
   const deleteMutation = useMutation({
@@ -43,14 +49,12 @@ export default function Employees() {
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
       toast({
         title: "Employee deleted",
-        description: "The employee has been successfully deleted.",
+        description: "The employee has been successfully removed.",
       });
-      setDeleteDialogOpen(false);
-      setEmployeeToDelete(undefined);
     },
     onError: (error: Error) => {
       toast({
-        title: "Delete failed",
+        title: "Failed to delete employee",
         description: error.message,
         variant: "destructive",
       });
@@ -76,23 +80,9 @@ export default function Employees() {
     if (employeeToDelete) {
       deleteMutation.mutate(employeeToDelete.id);
     }
+    setDeleteDialogOpen(false);
+    setEmployeeToDelete(undefined);
   };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Employees</h1>
-            <p className="text-muted-foreground">Manage employee records and information</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading employees...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -118,12 +108,16 @@ export default function Employees() {
         />
       </div>
 
-      <EmployeeTable
-        employees={employees}
-        onView={(emp) => console.log("View:", emp)}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+      {isLoading ? (
+        <div className="text-center py-12">Loading employees...</div>
+      ) : (
+        <EmployeeTable
+          employees={data?.employees || []}
+          onView={(emp) => console.log("View:", emp)}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
 
       <EmployeeFormModal
         open={formOpen}
@@ -141,12 +135,8 @@ export default function Employees() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete} 
-              data-testid="button-confirm-delete"
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            <AlertDialogAction onClick={confirmDelete} data-testid="button-confirm-delete">
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

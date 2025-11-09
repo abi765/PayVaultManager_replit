@@ -6,28 +6,31 @@ import { Plus } from "lucide-react";
 import SalaryTable from "@/components/SalaryTable";
 import { SalaryPayment, Employee } from "@shared/schema";
 import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Salary() {
   const { toast } = useToast();
-  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const queryParams = new URLSearchParams({
-    limit: "50",
-    offset: "0",
-    ...(selectedMonth && { month: selectedMonth }),
-    ...(statusFilter !== "all" && { status: statusFilter }),
+  const { data, isLoading } = useQuery<{ payments: (SalaryPayment & { employee?: Employee })[]; total: number }>({
+    queryKey: ["/api/salary", selectedMonth, statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append("month", selectedMonth);
+      if (statusFilter !== "all") params.append("status", statusFilter);
+      const response = await fetch(`/api/salary?${params}`, {
+        headers: {
+          "x-user-id": localStorage.getItem("userId") || "",
+        },
+      });
+      return response.json();
+    },
   });
 
-  const queryKey = ["/api/salary", `?${queryParams.toString()}`];
-
-  const { data: payments = [], isLoading } = useQuery<(SalaryPayment & { employee?: Employee })[]>({
-    queryKey,
-  });
-
-  const generateSalaryMutation = useMutation({
+  const generateMutation = useMutation({
     mutationFn: async (month: string) => {
       const res = await apiRequest("POST", "/api/salary/generate", { month });
       return res.json();
@@ -36,7 +39,7 @@ export default function Salary() {
       queryClient.invalidateQueries({ queryKey: ["/api/salary"] });
       toast({
         title: "Salary generated",
-        description: "Salary has been successfully generated for all active employees.",
+        description: "Salary records have been created for all active employees.",
       });
     },
     onError: (error: Error) => {
@@ -49,11 +52,10 @@ export default function Salary() {
   });
 
   const markPaidMutation = useMutation({
-    mutationFn: async (payment: SalaryPayment) => {
-      const res = await apiRequest("PUT", `/api/salary/${payment.id}`, {
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("PUT", `/api/salary/${id}`, {
         status: "paid",
         paymentDate: new Date().toISOString(),
-        paymentMethod: "Bank Transfer",
       });
       return res.json();
     },
@@ -61,12 +63,12 @@ export default function Salary() {
       queryClient.invalidateQueries({ queryKey: ["/api/salary"] });
       toast({
         title: "Payment marked as paid",
-        description: "The salary payment has been successfully marked as paid.",
+        description: "The salary payment has been successfully updated.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to mark as paid",
+        title: "Failed to update payment",
         description: error.message,
         variant: "destructive",
       });
@@ -74,28 +76,12 @@ export default function Salary() {
   });
 
   const handleGenerateSalary = () => {
-    generateSalaryMutation.mutate(selectedMonth);
+    generateMutation.mutate(selectedMonth);
   };
 
   const handleMarkPaid = (payment: SalaryPayment) => {
-    markPaidMutation.mutate(payment);
+    markPaidMutation.mutate(payment.id);
   };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Salary Management</h1>
-            <p className="text-muted-foreground">Manage employee salary payments and records</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading salary records...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -104,14 +90,14 @@ export default function Salary() {
           <h1 className="text-2xl font-bold">Salary Management</h1>
           <p className="text-muted-foreground">Manage employee salary payments and records</p>
         </div>
-        <Button 
-          onClick={handleGenerateSalary} 
-          data-testid="button-generate-salary" 
+        <Button
+          onClick={handleGenerateSalary}
+          disabled={generateMutation.isPending}
+          data-testid="button-generate-salary"
           className="gap-2"
-          disabled={generateSalaryMutation.isPending}
         >
           <Plus className="h-4 w-4" />
-          {generateSalaryMutation.isPending ? "Generating..." : "Generate Salary"}
+          {generateMutation.isPending ? "Generating..." : "Generate Salary"}
         </Button>
       </div>
 
@@ -122,9 +108,13 @@ export default function Salary() {
               <SelectValue placeholder="Select month" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2024-01">January 2024</SelectItem>
-              <SelectItem value="2023-12">December 2023</SelectItem>
-              <SelectItem value="2023-11">November 2023</SelectItem>
+              <SelectItem value={currentMonth}>{format(new Date(), "MMMM yyyy")}</SelectItem>
+              <SelectItem value={format(new Date(new Date().setMonth(new Date().getMonth() - 1)), "yyyy-MM")}>
+                {format(new Date(new Date().setMonth(new Date().getMonth() - 1)), "MMMM yyyy")}
+              </SelectItem>
+              <SelectItem value={format(new Date(new Date().setMonth(new Date().getMonth() - 2)), "yyyy-MM")}>
+                {format(new Date(new Date().setMonth(new Date().getMonth() - 2)), "MMMM yyyy")}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -144,7 +134,11 @@ export default function Salary() {
         </div>
       </div>
 
-      <SalaryTable salaryPayments={payments} onMarkPaid={handleMarkPaid} />
+      {isLoading ? (
+        <div className="text-center py-12">Loading salary records...</div>
+      ) : (
+        <SalaryTable salaryPayments={data?.payments || []} onMarkPaid={handleMarkPaid} />
+      )}
     </div>
   );
 }

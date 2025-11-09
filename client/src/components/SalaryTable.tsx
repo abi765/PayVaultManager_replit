@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CheckCircle2 } from "lucide-react";
 import { PAYMENT_STATUS } from "@/lib/constants";
 import { format } from "date-fns";
+import { formatPKR } from "@/lib/utils";
 
 interface SalaryTableProps {
   salaryPayments: (SalaryPayment & { employee?: Employee })[];
@@ -42,7 +43,7 @@ export default function SalaryTable({ salaryPayments, onMarkPaid }: SalaryTableP
                   {payment.month}
                 </TableCell>
                 <TableCell data-testid={`text-salary-amount-${payment.id}`}>
-                  {payment.amount.toLocaleString()}
+                  {formatPKR(payment.amount)}
                 </TableCell>
                 <TableCell data-testid={`text-salary-date-${payment.id}`}>
                   {payment.paymentDate ? format(new Date(payment.paymentDate), "MMM dd, yyyy") : "-"}

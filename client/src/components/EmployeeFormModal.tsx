@@ -43,7 +43,7 @@ export default function EmployeeFormModal({ open, onOpenChange, employee }: Empl
         bankName: employee.bankName || "",
         bankBranch: employee.bankBranch || "",
         salary: employee.salary?.toString() || "",
-        status: employee.status || "active",
+        status: (employee.status as "active" | "on_leave" | "inactive") || "active",
       });
     } else if (open && !employee) {
       setFormData({
