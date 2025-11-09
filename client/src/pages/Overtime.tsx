@@ -198,7 +198,11 @@ function OvertimeDialog({
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof overtimeSchema>) => {
-      return await apiRequest("POST", "/api/overtime", data);
+      const payload = {
+        ...data,
+        totalAmount: data.hours * data.rate,
+      };
+      return await apiRequest("POST", "/api/overtime", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/overtime"] });

@@ -508,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employeeId = req.query.employeeId ? parseInt(req.query.employeeId as string) : undefined;
       const month = req.query.month as string | undefined;
       const records = await storage.getOvertimeRecords({ employeeId, month });
-      res.json(records);
+      res.json({ records });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
