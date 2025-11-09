@@ -1,6 +1,21 @@
-import { type User, type InsertUser, type Employee, type InsertEmployee, type SalaryPayment, type InsertSalaryPayment } from "@shared/schema";
+import { 
+  type User, type InsertUser, 
+  type Employee, type InsertEmployee, 
+  type SalaryPayment, type InsertSalaryPayment,
+  type Deduction, type InsertDeduction,
+  type Allowance, type InsertAllowance,
+  type EmployeeDeduction, type InsertEmployeeDeduction,
+  type EmployeeAllowance, type InsertEmployeeAllowance,
+  type OvertimeRecord, type InsertOvertimeRecord,
+  type SalaryBreakdown, type InsertSalaryBreakdown,
+  type LocationLog, type InsertLocationLog
+} from "@shared/schema";
 import { db } from "./db";
-import { users, employees, salaryPayments } from "@shared/schema";
+import { 
+  users, employees, salaryPayments, 
+  deductions, allowances, employeeDeductions, employeeAllowances,
+  overtimeRecords, salaryBreakdown, locationLogs
+} from "@shared/schema";
 import { eq, desc, and, like, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -29,6 +44,50 @@ export interface IStorage {
     monthlyPayroll: number;
     pendingPayments: number;
     processedPayments: number;
+  }>;
+  
+  getDeductions(options?: { limit?: number; offset?: number }): Promise<{ deductions: Deduction[]; total: number }>;
+  getDeductionById(id: number): Promise<Deduction | undefined>;
+  createDeduction(deduction: InsertDeduction): Promise<Deduction>;
+  updateDeduction(id: number, deduction: Partial<InsertDeduction>): Promise<Deduction | undefined>;
+  deleteDeduction(id: number): Promise<boolean>;
+  
+  getAllowances(options?: { limit?: number; offset?: number }): Promise<{ allowances: Allowance[]; total: number }>;
+  getAllowanceById(id: number): Promise<Allowance | undefined>;
+  createAllowance(allowance: InsertAllowance): Promise<Allowance>;
+  updateAllowance(id: number, allowance: Partial<InsertAllowance>): Promise<Allowance | undefined>;
+  deleteAllowance(id: number): Promise<boolean>;
+  
+  getEmployeeDeductions(employeeId: number): Promise<(EmployeeDeduction & { deduction?: Deduction })[]>;
+  createEmployeeDeduction(employeeDeduction: InsertEmployeeDeduction): Promise<EmployeeDeduction>;
+  updateEmployeeDeduction(id: number, employeeDeduction: Partial<InsertEmployeeDeduction>): Promise<EmployeeDeduction | undefined>;
+  deleteEmployeeDeduction(id: number): Promise<boolean>;
+  
+  getEmployeeAllowances(employeeId: number): Promise<(EmployeeAllowance & { allowance?: Allowance })[]>;
+  createEmployeeAllowance(employeeAllowance: InsertEmployeeAllowance): Promise<EmployeeAllowance>;
+  updateEmployeeAllowance(id: number, employeeAllowance: Partial<InsertEmployeeAllowance>): Promise<EmployeeAllowance | undefined>;
+  deleteEmployeeAllowance(id: number): Promise<boolean>;
+  
+  getOvertimeRecords(options?: { employeeId?: number; month?: string }): Promise<OvertimeRecord[]>;
+  getOvertimeRecordById(id: number): Promise<OvertimeRecord | undefined>;
+  createOvertimeRecord(overtimeRecord: InsertOvertimeRecord): Promise<OvertimeRecord>;
+  updateOvertimeRecord(id: number, overtimeRecord: Partial<InsertOvertimeRecord>): Promise<OvertimeRecord | undefined>;
+  deleteOvertimeRecord(id: number): Promise<boolean>;
+  
+  getSalaryBreakdown(salaryPaymentId: number): Promise<SalaryBreakdown[]>;
+  createSalaryBreakdown(breakdown: InsertSalaryBreakdown): Promise<SalaryBreakdown>;
+  
+  createLocationLog(locationLog: Omit<InsertLocationLog, 'timestamp'> & { timestamp?: Date }): Promise<LocationLog>;
+  getLocationLogs(options?: { employeeId?: number; limit?: number }): Promise<LocationLog[]>;
+  
+  calculateSalary(employeeId: number, month: string): Promise<{
+    baseSalary: number;
+    allowances: { name: string; amount: number; details: string }[];
+    overtime: { hours: number; rate: number; amount: number } | null;
+    deductions: { name: string; amount: number; details: string }[];
+    totalAllowances: number;
+    totalDeductions: number;
+    netSalary: number;
   }>;
 }
 
@@ -225,6 +284,296 @@ export class DbStorage implements IStorage {
       monthlyPayroll: Number(employeeStats?.payroll || 0),
       pendingPayments: Number(paymentStats?.pending || 0),
       processedPayments: Number(paymentStats?.processed || 0),
+    };
+  }
+
+  async getDeductions(options?: { limit?: number; offset?: number }): Promise<{ deductions: Deduction[]; total: number }> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
+
+    const [deductionList, countResult] = await Promise.all([
+      db.select().from(deductions).orderBy(desc(deductions.createdAt)).limit(limit).offset(offset),
+      db.select({ count: sql<number>`count(*)` }).from(deductions),
+    ]);
+
+    return {
+      deductions: deductionList,
+      total: Number(countResult[0]?.count || 0),
+    };
+  }
+
+  async getDeductionById(id: number): Promise<Deduction | undefined> {
+    const [deduction] = await db.select().from(deductions).where(eq(deductions.id, id)).limit(1);
+    return deduction;
+  }
+
+  async createDeduction(insertDeduction: InsertDeduction): Promise<Deduction> {
+    const [deduction] = await db.insert(deductions).values(insertDeduction).returning();
+    return deduction;
+  }
+
+  async updateDeduction(id: number, updateData: Partial<InsertDeduction>): Promise<Deduction | undefined> {
+    const [deduction] = await db.update(deductions).set(updateData).where(eq(deductions.id, id)).returning();
+    return deduction;
+  }
+
+  async deleteDeduction(id: number): Promise<boolean> {
+    const result = await db.delete(deductions).where(eq(deductions.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getAllowances(options?: { limit?: number; offset?: number }): Promise<{ allowances: Allowance[]; total: number }> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
+
+    const [allowanceList, countResult] = await Promise.all([
+      db.select().from(allowances).orderBy(desc(allowances.createdAt)).limit(limit).offset(offset),
+      db.select({ count: sql<number>`count(*)` }).from(allowances),
+    ]);
+
+    return {
+      allowances: allowanceList,
+      total: Number(countResult[0]?.count || 0),
+    };
+  }
+
+  async getAllowanceById(id: number): Promise<Allowance | undefined> {
+    const [allowance] = await db.select().from(allowances).where(eq(allowances.id, id)).limit(1);
+    return allowance;
+  }
+
+  async createAllowance(insertAllowance: InsertAllowance): Promise<Allowance> {
+    const [allowance] = await db.insert(allowances).values(insertAllowance).returning();
+    return allowance;
+  }
+
+  async updateAllowance(id: number, updateData: Partial<InsertAllowance>): Promise<Allowance | undefined> {
+    const [allowance] = await db.update(allowances).set(updateData).where(eq(allowances.id, id)).returning();
+    return allowance;
+  }
+
+  async deleteAllowance(id: number): Promise<boolean> {
+    const result = await db.delete(allowances).where(eq(allowances.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getEmployeeDeductions(employeeId: number): Promise<(EmployeeDeduction & { deduction?: Deduction })[]> {
+    const rows = await db
+      .select({
+        employeeDeduction: employeeDeductions,
+        deduction: deductions,
+      })
+      .from(employeeDeductions)
+      .leftJoin(deductions, eq(employeeDeductions.deductionId, deductions.id))
+      .where(and(eq(employeeDeductions.employeeId, employeeId), eq(employeeDeductions.isActive, 1)));
+
+    return rows.map((row) => ({
+      ...row.employeeDeduction,
+      deduction: row.deduction || undefined,
+    }));
+  }
+
+  async createEmployeeDeduction(insertEmployeeDeduction: InsertEmployeeDeduction): Promise<EmployeeDeduction> {
+    const [employeeDeduction] = await db.insert(employeeDeductions).values(insertEmployeeDeduction).returning();
+    return employeeDeduction;
+  }
+
+  async updateEmployeeDeduction(id: number, updateData: Partial<InsertEmployeeDeduction>): Promise<EmployeeDeduction | undefined> {
+    const [employeeDeduction] = await db.update(employeeDeductions).set(updateData).where(eq(employeeDeductions.id, id)).returning();
+    return employeeDeduction;
+  }
+
+  async deleteEmployeeDeduction(id: number): Promise<boolean> {
+    const result = await db.delete(employeeDeductions).where(eq(employeeDeductions.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getEmployeeAllowances(employeeId: number): Promise<(EmployeeAllowance & { allowance?: Allowance })[]> {
+    const rows = await db
+      .select({
+        employeeAllowance: employeeAllowances,
+        allowance: allowances,
+      })
+      .from(employeeAllowances)
+      .leftJoin(allowances, eq(employeeAllowances.allowanceId, allowances.id))
+      .where(and(eq(employeeAllowances.employeeId, employeeId), eq(employeeAllowances.isActive, 1)));
+
+    return rows.map((row) => ({
+      ...row.employeeAllowance,
+      allowance: row.allowance || undefined,
+    }));
+  }
+
+  async createEmployeeAllowance(insertEmployeeAllowance: InsertEmployeeAllowance): Promise<EmployeeAllowance> {
+    const [employeeAllowance] = await db.insert(employeeAllowances).values(insertEmployeeAllowance).returning();
+    return employeeAllowance;
+  }
+
+  async updateEmployeeAllowance(id: number, updateData: Partial<InsertEmployeeAllowance>): Promise<EmployeeAllowance | undefined> {
+    const [employeeAllowance] = await db.update(employeeAllowances).set(updateData).where(eq(employeeAllowances.id, id)).returning();
+    return employeeAllowance;
+  }
+
+  async deleteEmployeeAllowance(id: number): Promise<boolean> {
+    const result = await db.delete(employeeAllowances).where(eq(employeeAllowances.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getOvertimeRecords(options?: { employeeId?: number; month?: string }): Promise<OvertimeRecord[]> {
+    const conditions = [];
+    if (options?.employeeId) {
+      conditions.push(eq(overtimeRecords.employeeId, options.employeeId));
+    }
+    if (options?.month) {
+      conditions.push(eq(overtimeRecords.month, options.month));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    return db.select().from(overtimeRecords).where(whereClause).orderBy(desc(overtimeRecords.createdAt));
+  }
+
+  async getOvertimeRecordById(id: number): Promise<OvertimeRecord | undefined> {
+    const [record] = await db.select().from(overtimeRecords).where(eq(overtimeRecords.id, id)).limit(1);
+    return record;
+  }
+
+  async createOvertimeRecord(insertRecord: InsertOvertimeRecord): Promise<OvertimeRecord> {
+    const [record] = await db.insert(overtimeRecords).values(insertRecord).returning();
+    return record;
+  }
+
+  async updateOvertimeRecord(id: number, updateData: Partial<InsertOvertimeRecord>): Promise<OvertimeRecord | undefined> {
+    const [record] = await db.update(overtimeRecords).set(updateData).where(eq(overtimeRecords.id, id)).returning();
+    return record;
+  }
+
+  async deleteOvertimeRecord(id: number): Promise<boolean> {
+    const result = await db.delete(overtimeRecords).where(eq(overtimeRecords.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getSalaryBreakdown(salaryPaymentId: number): Promise<SalaryBreakdown[]> {
+    return db.select().from(salaryBreakdown).where(eq(salaryBreakdown.salaryPaymentId, salaryPaymentId)).orderBy(salaryBreakdown.componentType);
+  }
+
+  async createSalaryBreakdown(insertBreakdown: InsertSalaryBreakdown): Promise<SalaryBreakdown> {
+    const [breakdown] = await db.insert(salaryBreakdown).values(insertBreakdown).returning();
+    return breakdown;
+  }
+
+  async createLocationLog(locationLog: Omit<InsertLocationLog, 'timestamp'> & { timestamp?: Date }): Promise<LocationLog> {
+    const [log] = await db.insert(locationLogs).values({
+      ...locationLog,
+      timestamp: locationLog.timestamp || new Date(),
+    }).returning();
+    return log;
+  }
+
+  async getLocationLogs(options?: { employeeId?: number; limit?: number }): Promise<LocationLog[]> {
+    const limit = options?.limit || 50;
+    const conditions = [];
+    if (options?.employeeId) {
+      conditions.push(eq(locationLogs.employeeId, options.employeeId));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    return db.select().from(locationLogs).where(whereClause).orderBy(desc(locationLogs.timestamp)).limit(limit);
+  }
+
+  async calculateSalary(employeeId: number, month: string): Promise<{
+    baseSalary: number;
+    allowances: { name: string; amount: number; details: string }[];
+    overtime: { hours: number; rate: number; amount: number } | null;
+    deductions: { name: string; amount: number; details: string }[];
+    totalAllowances: number;
+    totalDeductions: number;
+    netSalary: number;
+  }> {
+    const employee = await this.getEmployeeById(employeeId);
+    if (!employee) {
+      throw new Error("Employee not found");
+    }
+
+    const baseSalary = employee.salary;
+
+    const employeeAllowancesList = await this.getEmployeeAllowances(employeeId);
+    const allowances: { name: string; amount: number; details: string }[] = [];
+    
+    for (const empAllowance of employeeAllowancesList) {
+      if (empAllowance.allowance) {
+        let amount = 0;
+        let details = "";
+        
+        if (empAllowance.customAmount) {
+          amount = empAllowance.customAmount;
+          details = `Custom amount: ${amount}`;
+        } else if (empAllowance.allowance.amount) {
+          amount = empAllowance.allowance.amount;
+          details = `Fixed amount: ${amount}`;
+        } else if (empAllowance.allowance.percentage) {
+          amount = baseSalary * (empAllowance.allowance.percentage / 100);
+          details = `${empAllowance.allowance.percentage}% of base salary (${baseSalary})`;
+        }
+        
+        allowances.push({
+          name: empAllowance.allowance.name,
+          amount,
+          details,
+        });
+      }
+    }
+
+    const overtimeList = await this.getOvertimeRecords({ employeeId, month });
+    let overtime: { hours: number; rate: number; amount: number } | null = null;
+    
+    if (overtimeList.length > 0) {
+      const totalHours = overtimeList.reduce((sum, ot) => sum + ot.hours, 0);
+      const totalAmount = overtimeList.reduce((sum, ot) => sum + ot.totalAmount, 0);
+      const avgRate = totalAmount / totalHours;
+      overtime = { hours: totalHours, rate: avgRate, amount: totalAmount };
+    }
+
+    const employeeDeductionsList = await this.getEmployeeDeductions(employeeId);
+    const deductions: { name: string; amount: number; details: string }[] = [];
+    
+    for (const empDeduction of employeeDeductionsList) {
+      if (empDeduction.deduction) {
+        let amount = 0;
+        let details = "";
+        
+        if (empDeduction.customAmount) {
+          amount = empDeduction.customAmount;
+          details = `Custom amount: ${amount}`;
+        } else if (empDeduction.deduction.amount) {
+          amount = empDeduction.deduction.amount;
+          details = `Fixed amount: ${amount}`;
+        } else if (empDeduction.deduction.percentage) {
+          amount = baseSalary * (empDeduction.deduction.percentage / 100);
+          details = `${empDeduction.deduction.percentage}% of base salary (${baseSalary})`;
+        }
+        
+        deductions.push({
+          name: empDeduction.deduction.name,
+          amount,
+          details,
+        });
+      }
+    }
+
+    const totalAllowances = allowances.reduce((sum, a) => sum + a.amount, 0) + (overtime?.amount || 0);
+    const totalDeductions = deductions.reduce((sum, d) => sum + d.amount, 0);
+    const netSalary = baseSalary + totalAllowances - totalDeductions;
+
+    return {
+      baseSalary,
+      allowances,
+      overtime,
+      deductions,
+      totalAllowances,
+      totalDeductions,
+      netSalary,
     };
   }
 }

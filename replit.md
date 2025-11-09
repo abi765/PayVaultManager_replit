@@ -90,6 +90,50 @@ Preferred communication style: Simple, everyday language.
 - Status values: "pending", "paid", "failed"
 - Timestamp: createdAt
 
+**Deductions Table**
+- Primary key: Auto-incrementing integer
+- Fields: name, type (tax/insurance/provident_fund/loan/other), amount, percentage, isActive
+- Either amount or percentage must be provided
+- Timestamp: createdAt
+
+**Allowances Table**
+- Primary key: Auto-incrementing integer
+- Fields: name, type (bonus/shift_premium/travel/housing/meal/other), amount, percentage, isLocationBased, minDistanceKm, isActive
+- Either amount or percentage must be provided
+- Timestamp: createdAt
+
+**Employee Deductions Table**
+- Primary key: Auto-incrementing integer
+- Foreign keys: employeeId, deductionId
+- Fields: customAmount (overrides default), isActive
+- Timestamp: createdAt
+
+**Employee Allowances Table**
+- Primary key: Auto-incrementing integer
+- Foreign keys: employeeId, allowanceId
+- Fields: customAmount (overrides default), isActive
+- Timestamp: createdAt
+
+**Overtime Records Table**
+- Primary key: Auto-incrementing integer
+- Foreign key: employeeId references employees(id)
+- Fields: month, hours, rate, totalAmount, notes
+- Timestamp: createdAt
+
+**Salary Breakdown Table**
+- Primary key: Auto-incrementing integer
+- Foreign key: salaryPaymentId references salary_payments(id)
+- Fields: componentType (base/allowance/overtime/deduction), componentName, amount, calculationDetails
+- Stores step-by-step calculation breakdown
+- Timestamp: createdAt
+
+**Location Logs Table**
+- Primary key: Auto-incrementing integer
+- Foreign key: employeeId references employees(id)
+- Fields: latitude, longitude, accuracy, timestamp, purpose
+- Tracks employee location for travel allowances and attendance
+- Timestamp: createdAt
+
 **ORM Approach**
 - Drizzle ORM for type-safe database queries
 - Zod schemas generated from Drizzle tables for validation
