@@ -10,7 +10,7 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (userId: string) => void;
+  login: (userId: string, username: string, role: string) => void;
   logout: () => void;
 }
 
@@ -24,21 +24,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const userId = localStorage.getItem("userId");
     if (userId) {
-      setUser({
-        id: userId,
-        username: "Admin User",
-        role: "admin",
-      });
+      fetch("/api/auth/me", {
+        headers: { "x-user-id": userId },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.user) {
+            setUser({
+              id: data.user.id,
+              username: data.user.username,
+              role: data.user.role,
+            });
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem("userId");
+          setUser(null);
+        })
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
-  const login = (userId: string) => {
+  const login = (userId: string, username: string, role: string) => {
     localStorage.setItem("userId", userId);
     setUser({
       id: userId,
-      username: "Admin User",
-      role: "admin",
+      username,
+      role,
     });
     setLocation("/");
   };

@@ -29,11 +29,11 @@ export default function Login() {
         throw new Error("Invalid credentials");
       }
 
-      const { userId } = await response.json();
-      login(userId);
+      const { userId, username: loggedInUsername, role } = await response.json();
+      login(userId, loggedInUsername, role);
       toast({
         title: "Login successful",
-        description: "Welcome to PayVault",
+        description: `Welcome to PayVault, ${loggedInUsername}`,
       });
     } catch (error: any) {
       toast({

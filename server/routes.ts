@@ -225,9 +225,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const created = [];
       for (const employee of activeOnly) {
+        const calculation = await storage.calculateSalary(employee.id, month);
+        
         const payment = await storage.createSalaryPayment({
           employeeId: employee.id,
-          amount: employee.salary,
+          amount: calculation.netSalary,
           month,
           status: "pending",
           paymentDate: null,
