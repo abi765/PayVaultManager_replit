@@ -1,4 +1,4 @@
-import { Home, Users, DollarSign, LogOut, User } from "lucide-react";
+import { Home, Users, DollarSign, Settings, LogOut, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,16 @@ const menuItems = [
     title: "Salary Management",
     url: "/salary",
     icon: DollarSign,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
+  {
+    title: "Users",
+    url: "/users",
+    icon: Users,
   },
 ];
 

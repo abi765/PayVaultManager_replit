@@ -22,6 +22,8 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getUsers(): Promise<User[]>;
+  deleteUser(id: string): Promise<boolean>;
   
   getEmployees(options?: { limit?: number; offset?: number; search?: string }): Promise<{ employees: Employee[]; total: number }>;
   getEmployeeById(id: number): Promise<Employee | undefined>;
@@ -105,6 +107,15 @@ export class DbStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async getEmployees(options?: { limit?: number; offset?: number; search?: string }): Promise<{ employees: Employee[]; total: number }> {

@@ -26,7 +26,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { insertDeductionSchema, insertAllowanceSchema, type Deduction, type Allowance } from "@shared/schema";
+import { type Deduction, type Allowance } from "@shared/schema";
 import { z } from "zod";
 
 export default function Settings() {
@@ -44,14 +44,16 @@ export default function Settings() {
     queryKey: ["/api/allowances"],
   });
 
-  const deductions = deductionsData?.deductions || [];
-  const allowances = allowancesData?.allowances || [];
+  const deductions = (deductionsData as any)?.deductions || [];
+  const allowances = (allowancesData as any)?.allowances || [];
 
   const deleteDeductionMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/deductions/${id}`, {
+      const response = await fetch(`/api/deductions/${id}`, {
         method: "DELETE",
+        headers: { "x-user-id": localStorage.getItem("userId") || "" },
       });
+      if (!response.ok) throw new Error("Failed to delete");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deductions"] });
@@ -64,9 +66,11 @@ export default function Settings() {
 
   const deleteAllowanceMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/allowances/${id}`, {
+      const response = await fetch(`/api/allowances/${id}`, {
         method: "DELETE",
+        headers: { "x-user-id": localStorage.getItem("userId") || "" },
       });
+      if (!response.ok) throw new Error("Failed to delete");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/allowances"] });
@@ -280,16 +284,21 @@ function DeductionDialog({
   deduction: Deduction | null;
 }) {
   const { toast } = useToast();
-  const formSchema = insertDeductionSchema.extend({
+  const formSchema = z.object({
+    name: z.string().min(1, "Deduction name is required"),
+    type: z.enum(["tax", "insurance", "provident_fund", "loan", "other"]),
     amount: z.coerce.number().positive().optional().nullable(),
     percentage: z.coerce.number().min(0).max(100).optional().nullable(),
+    isActive: z.number().default(1),
+  }).refine(data => data.amount || data.percentage, {
+    message: "Either amount or percentage must be provided",
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: deduction?.name || "",
-      type: deduction?.type || "other",
+      type: (deduction?.type || "other") as "tax" | "insurance" | "provident_fund" | "loan" | "other",
       amount: deduction?.amount || null,
       percentage: deduction?.percentage || null,
       isActive: deduction?.isActive || 1,
@@ -300,10 +309,7 @@ function DeductionDialog({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       const url = deduction ? `/api/deductions/${deduction.id}` : "/api/deductions";
       const method = deduction ? "PUT" : "POST";
-      return await apiRequest(url, {
-        method,
-        body: JSON.stringify(data),
-      });
+      return await apiRequest(method, url, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deductions"] });
@@ -440,17 +446,23 @@ function AllowanceDialog({
   allowance: Allowance | null;
 }) {
   const { toast } = useToast();
-  const formSchema = insertAllowanceSchema.extend({
+  const formSchema = z.object({
+    name: z.string().min(1, "Allowance name is required"),
+    type: z.enum(["bonus", "shift_premium", "travel", "housing", "meal", "other"]),
     amount: z.coerce.number().positive().optional().nullable(),
     percentage: z.coerce.number().min(0).max(100).optional().nullable(),
+    isLocationBased: z.number().default(0),
     minDistanceKm: z.coerce.number().positive().optional().nullable(),
+    isActive: z.number().default(1),
+  }).refine(data => data.amount || data.percentage, {
+    message: "Either amount or percentage must be provided",
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: allowance?.name || "",
-      type: allowance?.type || "other",
+      type: (allowance?.type || "other") as "bonus" | "shift_premium" | "travel" | "housing" | "meal" | "other",
       amount: allowance?.amount || null,
       percentage: allowance?.percentage || null,
       isLocationBased: allowance?.isLocationBased || 0,
@@ -463,10 +475,7 @@ function AllowanceDialog({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       const url = allowance ? `/api/allowances/${allowance.id}` : "/api/allowances";
       const method = allowance ? "PUT" : "POST";
-      return await apiRequest(url, {
-        method,
-        body: JSON.stringify(data),
-      });
+      return await apiRequest(method, url, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/allowances"] });

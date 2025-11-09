@@ -8,6 +8,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import Dashboard from "@/pages/Dashboard";
 import Employees from "@/pages/Employees";
 import Salary from "@/pages/Salary";
+import Settings from "@/pages/Settings";
+import Users from "@/pages/Users";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -37,6 +39,8 @@ function Router() {
       <Route path="/">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/employees">{() => <ProtectedRoute component={Employees} />}</Route>
       <Route path="/salary">{() => <ProtectedRoute component={Salary} />}</Route>
+      <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
+      <Route path="/users">{() => <ProtectedRoute component={Users} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
