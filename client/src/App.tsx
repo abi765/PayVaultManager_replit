@@ -38,6 +38,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/">{() => <ProtectedRoute component={Dashboard} />}</Route>
+      <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/employees">{() => <ProtectedRoute component={Employees} />}</Route>
       <Route path="/salary">{() => <ProtectedRoute component={Salary} />}</Route>
       <Route path="/overtime">{() => <ProtectedRoute component={Overtime} />}</Route>

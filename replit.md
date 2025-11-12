@@ -69,10 +69,11 @@ Preferred communication style: Simple, everyday language.
 - Users: `/api/users` (GET, POST, DELETE)
 
 **Authentication & Authorization**
-- Simple user-based authentication (no JWT, uses localStorage)
+- Bcrypt password hashing (bcrypt.compare for login, bcrypt.hash(10) for storage)
 - User ID passed via custom header (`x-user-id`)
 - Role-based access control with middleware
 - Default test user: admin/admin123
+- Admin password hash: $2b$10$XTwiBX3WBLckp5624AA9c.zK4rnJgzq.JnQ..fQDG.KoMpPkwTDky
 
 ### Data Storage
 
