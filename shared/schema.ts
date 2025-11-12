@@ -126,7 +126,7 @@ export const insertEmployeeSchema = z.object({
   bankAccountNumber: z.string().min(8, "Account number must be at least 8 digits").regex(/^\d+$/, "Only digits allowed"),
   bankName: z.string().min(1, "Bank name is required"),
   salary: z.coerce.number().positive("Salary must be greater than 0"),
-  iban: z.string().nullable().optional(),
+  iban: z.string().regex(/^PK\d{2}[A-Z0-9]{20}$/i, "IBAN must be in Pakistani format: PK + 2 digits + 20 alphanumeric characters (total 24 characters)").nullable().optional().or(z.literal("")),
   address: z.string().nullable().optional(),
   bankBranch: z.string().nullable().optional(),
   status: z.enum(["active", "on_leave", "inactive"]).default("active"),

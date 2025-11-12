@@ -223,8 +223,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { employees: activeEmployees } = await storage.getEmployees({ limit: 1000 });
       const activeOnly = activeEmployees.filter(emp => emp.status === "active");
 
+      const { payments: existingPayments } = await storage.getSalaryPayments({ month });
+      const existingEmployeeIds = new Set(existingPayments.map(p => p.employeeId));
+
       const created = [];
+      const skipped = [];
+      
       for (const employee of activeOnly) {
+        if (existingEmployeeIds.has(employee.id)) {
+          skipped.push({ employeeId: employee.id, name: employee.fullName });
+          continue;
+        }
+
         const calculation = await storage.calculateSalary(employee.id, month);
         
         const payment = await storage.createSalaryPayment({
@@ -240,8 +250,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.status(201).json({ 
-        message: `Generated ${created.length} salary records for ${month}`,
+        message: `Generated ${created.length} salary records for ${month}${skipped.length > 0 ? `, skipped ${skipped.length} duplicates` : ''}`,
         count: created.length,
+        skipped: skipped.length,
         payments: created,
       });
     } catch (error: any) {

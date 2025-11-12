@@ -1,15 +1,163 @@
-import { SalaryPayment, Employee } from "@shared/schema";
+import { useState } from "react";
+import { SalaryPayment, Employee, SalaryBreakdown } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CheckCircle2, FileText } from "lucide-react";
 import { PAYMENT_STATUS } from "@/lib/constants";
 import { format } from "date-fns";
 import { formatPKR } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 interface SalaryTableProps {
   salaryPayments: (SalaryPayment & { employee?: Employee })[];
   onMarkPaid?: (payment: SalaryPayment) => void;
+}
+
+function BreakdownDialog({ payment }: { payment: SalaryPayment & { employee?: Employee } }) {
+  const [open, setOpen] = useState(false);
+  
+  const { data: breakdown, isLoading, isError } = useQuery<SalaryBreakdown[]>({
+    queryKey: [`/api/salary/${payment.id}/breakdown`],
+    enabled: open,
+  });
+
+  const baseItems = breakdown?.filter(b => b.componentType === "base") || [];
+  const allowanceItems = breakdown?.filter(b => b.componentType === "allowance") || [];
+  const overtimeItems = breakdown?.filter(b => b.componentType === "overtime") || [];
+  const deductionItems = breakdown?.filter(b => b.componentType === "deduction") || [];
+
+  const baseTotal = baseItems.reduce((sum, b) => sum + b.amount, 0);
+  const allowanceTotal = allowanceItems.reduce((sum, b) => sum + b.amount, 0);
+  const overtimeTotal = overtimeItems.reduce((sum, b) => sum + b.amount, 0);
+  const deductionTotal = deductionItems.reduce((sum, b) => sum + b.amount, 0);
+  const grandTotal = baseTotal + allowanceTotal + overtimeTotal - deductionTotal;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="gap-1.5" data-testid={`button-view-breakdown-${payment.id}`}>
+          <FileText className="h-4 w-4" />
+          View Breakdown
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            Salary Breakdown - {payment.employee?.fullName || `Employee #${payment.employeeId}`}
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Month: {payment.month}
+          </p>
+        </DialogHeader>
+        
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading breakdown...</div>
+        ) : isError ? (
+          <div className="text-center py-8 text-destructive">Failed to load salary breakdown. Please try again.</div>
+        ) : !breakdown || breakdown.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">No breakdown data available for this payment.</div>
+        ) : (
+          <div className="space-y-4">
+            {/* Base Salary */}
+            <div className="rounded-md border p-4">
+              <h3 className="font-semibold mb-2 flex items-center justify-between">
+                <span>Base Salary</span>
+                <span className="text-primary">{formatPKR(baseTotal)}</span>
+              </h3>
+              {baseItems.map((item, idx) => (
+                <div key={idx} className="flex justify-between text-sm py-1">
+                  <span className="text-muted-foreground">{item.componentName}</span>
+                  <span>{formatPKR(item.amount)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Allowances */}
+            {allowanceItems.length > 0 && (
+              <div className="rounded-md border p-4">
+                <h3 className="font-semibold mb-2 flex items-center justify-between text-green-600 dark:text-green-400">
+                  <span>Allowances</span>
+                  <span>+{formatPKR(allowanceTotal)}</span>
+                </h3>
+                {allowanceItems.map((item, idx) => (
+                  <div key={idx} className="space-y-1 py-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{item.componentName}</span>
+                      <span>{formatPKR(item.amount)}</span>
+                    </div>
+                    {item.calculationDetails && (
+                      <div className="text-xs text-muted-foreground pl-4">
+                        {item.calculationDetails}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Overtime */}
+            {overtimeItems.length > 0 && (
+              <div className="rounded-md border p-4">
+                <h3 className="font-semibold mb-2 flex items-center justify-between text-blue-600 dark:text-blue-400">
+                  <span>Overtime</span>
+                  <span>+{formatPKR(overtimeTotal)}</span>
+                </h3>
+                {overtimeItems.map((item, idx) => (
+                  <div key={idx} className="space-y-1 py-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{item.componentName}</span>
+                      <span>{formatPKR(item.amount)}</span>
+                    </div>
+                    {item.calculationDetails && (
+                      <div className="text-xs text-muted-foreground pl-4">
+                        {item.calculationDetails}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Deductions */}
+            {deductionItems.length > 0 && (
+              <div className="rounded-md border p-4">
+                <h3 className="font-semibold mb-2 flex items-center justify-between text-red-600 dark:text-red-400">
+                  <span>Deductions</span>
+                  <span>-{formatPKR(deductionTotal)}</span>
+                </h3>
+                {deductionItems.map((item, idx) => (
+                  <div key={idx} className="space-y-1 py-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{item.componentName}</span>
+                      <span>{formatPKR(item.amount)}</span>
+                    </div>
+                    {item.calculationDetails && (
+                      <div className="text-xs text-muted-foreground pl-4">
+                        {item.calculationDetails}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Total */}
+            <div className="rounded-md border border-primary p-4 bg-primary/5">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold text-lg">Net Salary</h3>
+                <span className="font-bold text-xl text-primary">{formatPKR(grandTotal)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Base ({formatPKR(baseTotal)}) + Allowances ({formatPKR(allowanceTotal)}) + Overtime ({formatPKR(overtimeTotal)}) - Deductions ({formatPKR(deductionTotal)})
+              </p>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export default function SalaryTable({ salaryPayments, onMarkPaid }: SalaryTableProps) {
@@ -58,7 +206,8 @@ export default function SalaryTable({ salaryPayments, onMarkPaid }: SalaryTableP
                     {PAYMENT_STATUS[payment.status as keyof typeof PAYMENT_STATUS]?.label || payment.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right space-x-2">
+                  <BreakdownDialog payment={payment} />
                   {payment.status === "pending" && (
                     <Button
                       variant="ghost"
