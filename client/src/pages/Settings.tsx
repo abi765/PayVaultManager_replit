@@ -49,11 +49,7 @@ export default function Settings() {
 
   const deleteDeductionMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/deductions/${id}`, {
-        method: "DELETE",
-        headers: { "x-user-id": localStorage.getItem("userId") || "" },
-      });
-      if (!response.ok) throw new Error("Failed to delete");
+      await apiRequest("DELETE", `/api/deductions/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deductions"] });
@@ -66,11 +62,7 @@ export default function Settings() {
 
   const deleteAllowanceMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/allowances/${id}`, {
-        method: "DELETE",
-        headers: { "x-user-id": localStorage.getItem("userId") || "" },
-      });
-      if (!response.ok) throw new Error("Failed to delete");
+      await apiRequest("DELETE", `/api/allowances/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/allowances"] });
@@ -102,6 +94,7 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="deductions" data-testid="tab-deductions">Deductions</TabsTrigger>
           <TabsTrigger value="allowances" data-testid="tab-allowances">Allowances</TabsTrigger>
+          <TabsTrigger value="account" data-testid="tab-account">Account</TabsTrigger>
         </TabsList>
 
         <TabsContent value="deductions" className="space-y-4">
@@ -256,6 +249,27 @@ export default function Settings() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="account" className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold">Account Settings</h2>
+            <p className="text-sm text-muted-foreground">
+              Manage your password and security settings
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+              <CardDescription>
+                Update your password to keep your account secure
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PasswordChangeForm />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -645,5 +659,118 @@ function AllowanceDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PasswordChangeForm() {
+  const { toast } = useToast();
+  
+  const formSchema = z.object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(6, "New password must be at least 6 characters"),
+    confirmPassword: z.string().min(6, "Confirm password must be at least 6 characters"),
+  }).refine(data => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: z.infer<typeof formSchema>) => {
+      const response = await apiRequest("POST", "/api/auth/change-password", {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Password changed successfully",
+      });
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change password",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="currentPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Current Password</FormLabel>
+              <FormControl>
+                <Input 
+                  type="password" 
+                  placeholder="Enter your current password" 
+                  {...field} 
+                  data-testid="input-current-password"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="newPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>New Password</FormLabel>
+              <FormControl>
+                <Input 
+                  type="password" 
+                  placeholder="Enter your new password (min 6 characters)" 
+                  {...field} 
+                  data-testid="input-new-password"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirm New Password</FormLabel>
+              <FormControl>
+                <Input 
+                  type="password" 
+                  placeholder="Confirm your new password" 
+                  {...field} 
+                  data-testid="input-confirm-password"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={mutation.isPending} data-testid="button-change-password">
+          {mutation.isPending ? "Changing..." : "Change Password"}
+        </Button>
+      </form>
+    </Form>
   );
 }
