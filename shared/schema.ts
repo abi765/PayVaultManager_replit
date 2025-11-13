@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, real, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, real, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -25,7 +25,11 @@ export const employees = pgTable("employees", {
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  statusIdx: index("employees_status_idx").on(table.status),
+  bankAccountIdx: index("employees_bank_account_idx").on(table.bankAccountNumber),
+  fullNameIdx: index("employees_full_name_idx").on(table.fullName),
+}));
 
 export const salaryPayments = pgTable("salary_payments", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -37,7 +41,12 @@ export const salaryPayments = pgTable("salary_payments", {
   paymentMethod: text("payment_method"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  employeeIdIdx: index("salary_payments_employee_id_idx").on(table.employeeId),
+  monthIdx: index("salary_payments_month_idx").on(table.month),
+  statusIdx: index("salary_payments_status_idx").on(table.status),
+  employeeMonthIdx: index("salary_payments_employee_month_idx").on(table.employeeId, table.month),
+}));
 
 export const deductions = pgTable("deductions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -68,7 +77,10 @@ export const employeeDeductions = pgTable("employee_deductions", {
   customAmount: real("custom_amount"),
   isActive: integer("is_active").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  employeeIdIdx: index("employee_deductions_employee_id_idx").on(table.employeeId),
+  deductionIdIdx: index("employee_deductions_deduction_id_idx").on(table.deductionId),
+}));
 
 export const employeeAllowances = pgTable("employee_allowances", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -77,7 +89,10 @@ export const employeeAllowances = pgTable("employee_allowances", {
   customAmount: real("custom_amount"),
   isActive: integer("is_active").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  employeeIdIdx: index("employee_allowances_employee_id_idx").on(table.employeeId),
+  allowanceIdIdx: index("employee_allowances_allowance_id_idx").on(table.allowanceId),
+}));
 
 export const overtimeRecords = pgTable("overtime_records", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -88,7 +103,11 @@ export const overtimeRecords = pgTable("overtime_records", {
   totalAmount: real("total_amount").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  employeeIdIdx: index("overtime_records_employee_id_idx").on(table.employeeId),
+  monthIdx: index("overtime_records_month_idx").on(table.month),
+  employeeMonthIdx: index("overtime_records_employee_month_idx").on(table.employeeId, table.month),
+}));
 
 export const salaryBreakdown = pgTable("salary_breakdown", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -98,7 +117,9 @@ export const salaryBreakdown = pgTable("salary_breakdown", {
   amount: real("amount").notNull(),
   calculationDetails: text("calculation_details"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  salaryPaymentIdIdx: index("salary_breakdown_salary_payment_id_idx").on(table.salaryPaymentId),
+}));
 
 export const locationLogs = pgTable("location_logs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -109,7 +130,10 @@ export const locationLogs = pgTable("location_logs", {
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   purpose: text("purpose"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  employeeIdIdx: index("location_logs_employee_id_idx").on(table.employeeId),
+  timestampIdx: index("location_logs_timestamp_idx").on(table.timestamp),
+}));
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
