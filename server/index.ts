@@ -12,6 +12,9 @@ validateEnv();
 
 const app = express();
 
+// Trust proxy - required for Render.com and rate limiting
+app.set('trust proxy', 1);
+
 // Security: HTTP headers protection
 app.use(helmet({
   contentSecurityPolicy: false, // Disable for Vite dev server
