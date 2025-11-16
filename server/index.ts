@@ -42,10 +42,11 @@ app.use(cors({
 // Security: Rate limiting for login attempts
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
+  max: 20, // 20 attempts per window (increased for testing with multiple users)
   message: "Too many login attempts, please try again after 15 minutes",
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true, // Only count failed login attempts
 });
 
 // Security: General API rate limiting

@@ -96,12 +96,39 @@ export default function Salary() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/salary/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/salary"] });
+      toast({
+        title: "Salary payment deleted",
+        description: "The salary payment has been successfully deleted.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete payment",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleGenerateSalary = () => {
     generateMutation.mutate(selectedMonth);
   };
 
   const handleMarkPaid = (payment: SalaryPayment) => {
     markPaidMutation.mutate(payment.id);
+  };
+
+  const handleDelete = (payment: SalaryPayment) => {
+    if (confirm(`Are you sure you want to delete this salary payment for ${payment.employee?.fullName}?`)) {
+      deleteMutation.mutate(payment.id);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -354,7 +381,7 @@ export default function Salary() {
       ) : isError ? (
         <div className="text-center py-12 text-destructive">Failed to load salary records. Please try again.</div>
       ) : (
-        <SalaryTable salaryPayments={data?.payments || []} onMarkPaid={handleMarkPaid} />
+        <SalaryTable salaryPayments={data?.payments || []} onMarkPaid={handleMarkPaid} onDelete={handleDelete} />
       )}
     </div>
   );

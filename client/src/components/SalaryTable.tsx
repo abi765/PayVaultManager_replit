@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CheckCircle2, FileText } from "lucide-react";
+import { CheckCircle2, FileText, Trash2 } from "lucide-react";
 import { PAYMENT_STATUS } from "@/lib/constants";
 import { format } from "date-fns";
 import { formatPKR } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 interface SalaryTableProps {
   salaryPayments: (SalaryPayment & { employee?: Employee })[];
   onMarkPaid?: (payment: SalaryPayment) => void;
+  onDelete?: (payment: SalaryPayment) => void;
 }
 
 function BreakdownDialog({ payment }: { payment: SalaryPayment & { employee?: Employee } }) {
@@ -160,7 +161,7 @@ function BreakdownDialog({ payment }: { payment: SalaryPayment & { employee?: Em
   );
 }
 
-export default function SalaryTable({ salaryPayments, onMarkPaid }: SalaryTableProps) {
+export default function SalaryTable({ salaryPayments, onMarkPaid, onDelete }: SalaryTableProps) {
   return (
     <div className="rounded-md border">
       <Table>
@@ -220,6 +221,16 @@ export default function SalaryTable({ salaryPayments, onMarkPaid }: SalaryTableP
                       Mark as Paid
                     </Button>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete?.(payment)}
+                    data-testid={`button-delete-${payment.id}`}
+                    className="gap-1.5 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </Button>
                 </TableCell>
               </TableRow>
             ))

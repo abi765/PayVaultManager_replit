@@ -47,13 +47,29 @@ PayVault is an employee salary management system designed for Pakistani business
 
 ## Login
 
-### First Time Login
+### Test User Accounts
 
-**Default Administrator Credentials:**
+The system comes with three pre-configured user accounts for testing all role permissions:
+
+**Administrator Account:**
+
 - **Username:** `admin`
 - **Password:** `admin123`
+- **Role:** Admin (Full access to all features)
 
-**Important:** Change the default password immediately after first login for security.
+**Manager Account:**
+
+- **Username:** `manager`
+- **Password:** `manager123`
+- **Role:** Manager (Can manage employees and salaries, but not users)
+
+**Viewer Account:**
+
+- **Username:** `viewer`
+- **Password:** `viewer123`
+- **Role:** Viewer (Read-only access to all data)
+
+**Important:** Change default passwords immediately for production use. These credentials are for testing purposes only.
 
 ### User Roles
 
@@ -65,19 +81,16 @@ PayVault has three user roles with different permissions:
 | **Manager** | Can manage employees, process salaries, manage overtime, deductions, and allowances. Cannot manage users |
 | **Viewer** | Read-only access to view employees, salaries, and reports. Cannot make any changes |
 
-### Logging Out
+### Switching Users
+
+To switch to a different user account:
 
 1. Click on your username in the sidebar (bottom section)
 2. Click **Logout** button
 3. You will be redirected to the login page
+4. Login with different user credentials
 
-### Switching Users
-
-To switch to a different user account:
-1. Logout from the current account
-2. **Clear browser localStorage** (Press F12 → Console → Type `localStorage.clear()` → Press Enter)
-3. Refresh the page
-4. Login with new credentials
+**Note:** You can test different user roles by logging out and logging in with different accounts (admin, manager, or viewer).
 
 ---
 

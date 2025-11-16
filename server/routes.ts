@@ -418,6 +418,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/salary/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteSalaryPayment(id);
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Salary payment not found" });
+      }
+
+      res.json({ message: "Salary payment deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/salary/employee/:id", requireAuth, async (req, res) => {
     try {
       const employeeId = parseInt(req.params.id);

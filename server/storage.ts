@@ -39,7 +39,8 @@ export interface IStorage {
   getSalaryPaymentsByEmployee(employeeId: number): Promise<SalaryPayment[]>;
   createSalaryPayment(payment: InsertSalaryPayment): Promise<SalaryPayment>;
   updateSalaryPayment(id: number, payment: Partial<InsertSalaryPayment>): Promise<SalaryPayment | undefined>;
-  
+  deleteSalaryPayment(id: number): Promise<boolean>;
+
   getDashboardStats(): Promise<{
     totalEmployees: number;
     activeEmployees: number;
@@ -270,6 +271,15 @@ export class DbStorage implements IStorage {
       .where(eq(salaryPayments.id, id))
       .returning();
     return payment;
+  }
+
+  async deleteSalaryPayment(id: number): Promise<boolean> {
+    // First delete associated breakdown records
+    await db.delete(salaryBreakdown).where(eq(salaryBreakdown.salaryPaymentId, id));
+
+    // Then delete the salary payment
+    const result = await db.delete(salaryPayments).where(eq(salaryPayments.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async getDashboardStats(): Promise<{
