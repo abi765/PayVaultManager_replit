@@ -47,29 +47,24 @@ PayVault is an employee salary management system designed for Pakistani business
 
 ## Login
 
-### Test User Accounts
+### Login Credentials
 
-The system comes with three pre-configured user accounts for testing all role permissions:
+**For Administrator (Full Access):**
 
-**Administrator Account:**
+- Username: `admin`
+- Password: `admin123`
 
-- **Username:** `admin`
-- **Password:** `admin123`
-- **Role:** Admin (Full access to all features)
+**For Manager (Can add employees and process salaries):**
 
-**Manager Account:**
+- Username: `manager`
+- Password: `manager123`
 
-- **Username:** `manager`
-- **Password:** `manager123`
-- **Role:** Manager (Can manage employees and salaries, but not users)
+**For Staff/Viewer (Can only view, not edit):**
 
-**Viewer Account:**
+- Username: `viewer`
+- Password: `viewer123`
 
-- **Username:** `viewer`
-- **Password:** `viewer123`
-- **Role:** Viewer (Read-only access to all data)
-
-**Important:** Change default passwords immediately for production use. These credentials are for testing purposes only.
+> **Note:** For testing only. Change passwords before using for real business.
 
 ### User Roles
 
@@ -81,16 +76,20 @@ PayVault has three user roles with different permissions:
 | **Manager** | Can manage employees, process salaries, manage overtime, deductions, and allowances. Cannot manage users |
 | **Viewer** | Read-only access to view employees, salaries, and reports. Cannot make any changes |
 
-### Switching Users
+### How to Logout and Switch Users
 
-To switch to a different user account:
+**To logout:**
 
-1. Click on your username in the sidebar (bottom section)
-2. Click **Logout** button
-3. You will be redirected to the login page
-4. Login with different user credentials
+1. Look at the bottom of the left sidebar
+2. Click on your username
+3. Click the **Logout** button
+4. You will go back to the login page
 
-**Note:** You can test different user roles by logging out and logging in with different accounts (admin, manager, or viewer).
+**To login as a different user:**
+
+1. Logout first (see above)
+2. Enter the new username and password
+3. Click **Sign In**
 
 ---
 
