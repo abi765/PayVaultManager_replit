@@ -1,4 +1,29 @@
-# PayVault User Guide
+<div align="center">
+  <table border="0">
+    <tr>
+      <td><img src="attached_assets/generated_images/PayVault_app_icon_logo_4053ec67.png" alt="PayVault Logo" width="80"/></td>
+      <td>
+        <h1>PayVault</h1>
+        <p><strong>Employee Salary Management System</strong></p>
+        <p>Streamlined salary management for Pakistani businesses</p>
+      </td>
+    </tr>
+  </table>
+
+  [![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/abi765/PayVaultManager_replit/releases/tag/v1.0)
+  [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+  [![Deploy](https://img.shields.io/badge/deploy-Render-success.svg)](https://payvault-app.onrender.com)
+  [![Status](https://img.shields.io/badge/status-testing-yellow.svg)](https://payvault-app.onrender.com)
+
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
+  [![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
+  [![Node.js](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-latest-blue.svg)](https://www.postgresql.org/)
+
+  [Live Demo](https://payvault-app.onrender.com) • [Documentation](#table-of-contents) • [Report Bug](https://github.com/abi765/PayVaultManager_replit/issues)
+</div>
+
+---
 
 > **⚠️ IMPORTANT NOTICE - TEST DEPLOYMENT**
 >
