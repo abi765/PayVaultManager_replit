@@ -23,21 +23,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
+    console.log(`[AUTH] Initializing - userId in localStorage: ${userId ? 'exists' : 'none'}`);
+
     if (userId) {
+      console.log(`[AUTH] Validating userId: ${userId}`);
       fetch("/api/auth/me", {
         headers: { "x-user-id": userId },
       })
-        .then((res) => res.json())
+        .then((res) => {
+          console.log(`[AUTH] Validation response status: ${res.status}`);
+          if (!res.ok) {
+            throw new Error("Authentication failed");
+          }
+          return res.json();
+        })
         .then((data) => {
           if (data.user) {
+            console.log(`[AUTH] User validated: ${data.user.username} (${data.user.role})`);
             setUser({
               id: data.user.id,
               username: data.user.username,
               role: data.user.role,
             });
+          } else {
+            throw new Error("Invalid user data");
           }
         })
-        .catch(() => {
+        .catch((error) => {
+          console.log(`[AUTH] Validation failed, clearing session:`, error.message);
           localStorage.removeItem("userId");
           setUser(null);
         })
@@ -48,16 +61,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (userId: string, username: string, role: string) => {
+    console.log(`[AUTH] Login called - userId: ${userId}, username: ${username}, role: ${role}`);
     localStorage.setItem("userId", userId);
     setUser({
       id: userId,
       username,
       role,
     });
-    setLocation("/");
+    console.log(`[AUTH] User state set, redirecting to /`);
+    // Use setTimeout to ensure state update has propagated before redirect
+    setTimeout(() => {
+      setLocation("/");
+    }, 100);
   };
 
   const logout = () => {
+    console.log(`[AUTH] Logout called - clearing session`);
     localStorage.removeItem("userId");
     setUser(null);
     setLocation("/login");

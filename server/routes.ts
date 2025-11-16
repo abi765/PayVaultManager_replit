@@ -21,24 +21,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
-      
+
+      console.log(`[LOGIN] Attempt for username: "${username}"`);
+
       if (!username || !password) {
+        console.log(`[LOGIN] Missing credentials - username: ${!!username}, password: ${!!password}`);
         return res.status(400).json({ message: "Username and password are required" });
       }
 
       const user = await storage.getUserByUsername(username);
-      
+
       if (!user) {
+        console.log(`[LOGIN] User not found: "${username}"`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
+
+      console.log(`[LOGIN] User found: "${username}" (${user.id}), role: ${user.role}`);
 
       const passwordMatch = await bcrypt.compare(password, user.password);
       if (!passwordMatch) {
+        console.log(`[LOGIN] Password mismatch for user: "${username}"`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
+      console.log(`[LOGIN] Success for user: "${username}"`);
       res.json({ userId: user.id, username: user.username, role: user.role });
     } catch (error: any) {
+      console.log(`[LOGIN] Error:`, error.message);
       res.status(500).json({ message: error.message });
     }
   });
@@ -281,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const calculation = await storage.calculateSalary(employee.id, month);
-        
+
         const payment = await storage.createSalaryPayment({
           employeeId: employee.id,
           amount: calculation.netSalary,
@@ -291,6 +300,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paymentMethod: null,
           notes: null,
         });
+
+        // Create breakdown records for this payment
+        await storage.createSalaryBreakdown({
+          salaryPaymentId: payment.id,
+          componentType: "base",
+          componentName: "Base Salary",
+          amount: calculation.baseSalary,
+          calculationDetails: null,
+        });
+
+        for (const allowance of calculation.allowances) {
+          await storage.createSalaryBreakdown({
+            salaryPaymentId: payment.id,
+            componentType: "allowance",
+            componentName: allowance.name,
+            amount: allowance.amount,
+            calculationDetails: allowance.details,
+          });
+        }
+
+        if (calculation.overtime) {
+          await storage.createSalaryBreakdown({
+            salaryPaymentId: payment.id,
+            componentType: "overtime",
+            componentName: "Overtime Pay",
+            amount: calculation.overtime.amount,
+            calculationDetails: `${calculation.overtime.hours} hours @ ${calculation.overtime.rate} PKR/hour`,
+          });
+        }
+
+        for (const deduction of calculation.deductions) {
+          await storage.createSalaryBreakdown({
+            salaryPaymentId: payment.id,
+            componentType: "deduction",
+            componentName: deduction.name,
+            amount: -deduction.amount,
+            calculationDetails: deduction.details,
+          });
+        }
+
         created.push(payment);
       }
 

@@ -1,3 +1,7 @@
+// Load environment variables from .env file (for local development)
+import dotenv from "dotenv";
+dotenv.config(); // Load .env if it exists
+
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -125,11 +129,18 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
+  // reusePort only works on Linux (Render.com), not macOS
+  const listenOptions: any = {
     port,
     host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  };
+
+  // Only use reusePort in production (Linux/Render)
+  if (process.env.NODE_ENV === 'production') {
+    listenOptions.reusePort = true;
+  }
+
+  server.listen(listenOptions, () => {
     log(`serving on port ${port}`);
   });
 })();

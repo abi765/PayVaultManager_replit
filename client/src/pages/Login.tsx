@@ -10,13 +10,15 @@ import { useToast } from "@/hooks/use-toast";
 export default function Login() {
   const { login } = useAuth();
   const { toast } = useToast();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    console.log(`[CLIENT] Login attempt for username: "${username}"`);
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -25,17 +27,24 @@ export default function Login() {
         body: JSON.stringify({ username, password }),
       });
 
+      console.log(`[CLIENT] Login response status: ${response.status}`);
+
       if (!response.ok) {
-        throw new Error("Invalid credentials");
+        const errorData = await response.json();
+        console.log(`[CLIENT] Login failed:`, errorData);
+        throw new Error(errorData.message || "Invalid credentials");
       }
 
       const { userId, username: loggedInUsername, role } = await response.json();
+      console.log(`[CLIENT] Login successful - userId: ${userId}, username: ${loggedInUsername}, role: ${role}`);
+
       login(userId, loggedInUsername, role);
       toast({
         title: "Login successful",
         description: `Welcome to PayVault, ${loggedInUsername}`,
       });
     } catch (error: any) {
+      console.log(`[CLIENT] Login error:`, error.message);
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials",
@@ -66,7 +75,7 @@ export default function Login() {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="Enter username"
                 data-testid="input-username"
                 required
               />
@@ -86,9 +95,6 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
-            <p className="text-xs text-center text-muted-foreground">
-              Demo credentials: admin / admin123
-            </p>
           </form>
         </CardContent>
       </Card>
