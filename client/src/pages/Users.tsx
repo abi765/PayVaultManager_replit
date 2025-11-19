@@ -13,6 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -26,6 +36,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle2 } from "lucide-react";
 
 const createUserSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -45,6 +57,8 @@ type User = {
 export default function Users() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | undefined>();
 
   const { data: usersData, isLoading } = useQuery({
     queryKey: ["/api/users"],
@@ -68,6 +82,19 @@ export default function Users() {
       toast({ title: "Error", description: "Failed to delete user", variant: "destructive" });
     },
   });
+
+  const handleDelete = (user: User) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
+    }
+    setDeleteDialogOpen(false);
+    setUserToDelete(undefined);
+  };
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -142,7 +169,7 @@ export default function Users() {
                   variant="outline"
                   size="sm"
                   className="w-full"
-                  onClick={() => deleteUserMutation.mutate(user.id)}
+                  onClick={() => handleDelete(user)}
                   data-testid={`button-delete-user-${user.id}`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -153,6 +180,45 @@ export default function Users() {
           ))}
         </div>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              Delete User - Warning!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p className="font-medium text-foreground">
+                You are about to delete user: <span className="font-bold">{userToDelete?.username}</span>
+                {userToDelete?.role && <span className="ml-2 text-xs px-2 py-1 rounded bg-muted capitalize">({userToDelete.role})</span>}
+              </p>
+              <div className="rounded-lg bg-destructive/10 p-3 space-y-2">
+                <p className="font-semibold text-destructive">⚠️ This action cannot be undone and will:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Permanently remove this user account</li>
+                  <li>Revoke all access permissions</li>
+                  <li>User will not be able to log in anymore</li>
+                  {userToDelete?.role === "admin" && (
+                    <li className="font-bold">⚠️ WARNING: This is an ADMIN account with full system access!</li>
+                  )}
+                </ul>
+              </div>
+              <p className="text-sm font-medium">Are you absolutely sure you want to proceed?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-user">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              data-testid="button-confirm-delete-user"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Yes, Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <CreateUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
@@ -167,6 +233,8 @@ function CreateUserDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { toast } = useToast();
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [pendingData, setPendingData] = useState<z.infer<typeof createUserSchema> | null>(null);
 
   const form = useForm<z.infer<typeof createUserSchema>>({
     resolver: zodResolver(createUserSchema),
@@ -189,6 +257,8 @@ function CreateUserDialog({
         description: "User created successfully",
       });
       onOpenChange(false);
+      setShowConfirmation(false);
+      setPendingData(null);
       form.reset();
     },
     onError: (error: any) => {
@@ -200,8 +270,33 @@ function CreateUserDialog({
     },
   });
 
+  const handleFormSubmit = (data: z.infer<typeof createUserSchema>) => {
+    setPendingData(data);
+    setShowConfirmation(true);
+  };
+
+  const confirmSubmit = () => {
+    if (pendingData) {
+      mutation.mutate(pendingData);
+    }
+  };
+
+  const getRoleDescription = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "Full access to all features including user management";
+      case "manager":
+        return "Can manage employees and process salaries";
+      case "viewer":
+        return "Read-only access to view data";
+      default:
+        return "";
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open && !showConfirmation} onOpenChange={onOpenChange}>
       <DialogContent data-testid="dialog-create-user">
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
@@ -210,7 +305,7 @@ function CreateUserDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="username"
@@ -298,5 +393,98 @@ function CreateUserDialog({
         </Form>
       </DialogContent>
     </Dialog>
+
+    {/* Confirmation Dialog */}
+    <Dialog open={showConfirmation} onOpenChange={(open) => {
+      if (!open) {
+        setShowConfirmation(false);
+        setPendingData(null);
+      }
+    }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+            Confirm User Details
+          </DialogTitle>
+          <DialogDescription>
+            Please review the information below before creating the user account
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <Alert>
+            <AlertDescription>
+              Please carefully review all information. This user will be able to log in with these credentials.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-3 rounded-lg border p-4">
+            <h3 className="font-semibold text-sm text-muted-foreground">Account Information</h3>
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-muted-foreground">Username</p>
+                  <p className="font-medium font-mono">{pendingData?.username}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Email</p>
+                  <p className="font-medium">{pendingData?.email || "Not provided"}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Password</p>
+                <p className="font-medium font-mono">{"•".repeat(pendingData?.password?.length || 0)} ({pendingData?.password?.length} characters)</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border p-4 bg-primary/5">
+            <h3 className="font-semibold text-sm text-muted-foreground">Role & Permissions</h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant={pendingData?.role === "admin" ? "default" : pendingData?.role === "manager" ? "secondary" : "outline"} className="capitalize">
+                  {pendingData?.role === "admin" && <Shield className="h-3 w-3 mr-1" />}
+                  {pendingData?.role}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {pendingData?.role && getRoleDescription(pendingData.role)}
+              </p>
+            </div>
+          </div>
+
+          {pendingData?.role === "admin" && (
+            <Alert className="border-orange-500/50 bg-orange-500/10">
+              <AlertDescription className="text-orange-700 dark:text-orange-400">
+                ⚠️ <strong>Warning:</strong> This user will have full administrative access to all system features including user management.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setShowConfirmation(false);
+              setPendingData(null);
+            }}
+            disabled={mutation.isPending}
+          >
+            Go Back & Edit
+          </Button>
+          <Button
+            onClick={confirmSubmit}
+            disabled={mutation.isPending}
+            data-testid="button-confirm-create-user"
+          >
+            {mutation.isPending ? "Creating..." : "Confirm & Create User"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
