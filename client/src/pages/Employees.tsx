@@ -128,15 +128,34 @@ export default function Employees() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Employee</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {employeeToDelete?.fullName}? This action cannot be undone.
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              Delete Employee - Warning!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p className="font-medium text-foreground">
+                You are about to delete: <span className="font-bold">{employeeToDelete?.fullName}</span> ({employeeToDelete?.employeeId})
+              </p>
+              <div className="rounded-lg bg-destructive/10 p-3 space-y-2">
+                <p className="font-semibold text-destructive">⚠️ This action cannot be undone and will:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Permanently delete the employee record</li>
+                  <li>Delete all salary payment history for this employee</li>
+                  <li>Delete all salary breakdown records</li>
+                  <li>Remove all associated financial data</li>
+                </ul>
+              </div>
+              <p className="text-sm font-medium">Are you absolutely sure you want to proceed?</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} data-testid="button-confirm-delete">
-              Delete
+            <AlertDialogAction
+              onClick={confirmDelete}
+              data-testid="button-confirm-delete"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Yes, Delete Employee
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
