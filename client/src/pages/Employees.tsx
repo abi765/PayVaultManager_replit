@@ -8,6 +8,7 @@ import EmployeeFormModal from "@/components/EmployeeFormModal";
 import { Employee } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,8 @@ import {
 
 export default function Employees() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "manager";
   const [searchTerm, setSearchTerm] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | undefined>();
@@ -86,15 +89,17 @@ export default function Employees() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Employees</h1>
-          <p className="text-muted-foreground">Manage employee records and information</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Employees</h1>
+          <p className="text-sm text-muted-foreground">Manage employee records and information</p>
         </div>
-        <Button onClick={handleAdd} data-testid="button-add-employee" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Employee
-        </Button>
+        {canEdit && (
+          <Button onClick={handleAdd} data-testid="button-add-employee" className="gap-2 w-full sm:w-auto">
+            <Plus className="h-4 w-4" />
+            Add Employee
+          </Button>
+        )}
       </div>
 
       <div className="relative">
@@ -116,6 +121,7 @@ export default function Employees() {
           onView={(emp) => console.log("View:", emp)}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          canEdit={canEdit}
         />
       )}
 

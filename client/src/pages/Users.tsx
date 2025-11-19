@@ -109,15 +109,15 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-users-title">User Management</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-users-title">User Management</h1>
+          <p className="text-sm text-muted-foreground">
             Create and manage user accounts for your organization
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} data-testid="button-add-user">
-          <Plus className="h-4 w-4" />
+        <Button onClick={() => setDialogOpen(true)} data-testid="button-add-user" className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-1" />
           Add User
         </Button>
       </div>

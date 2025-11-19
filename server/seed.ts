@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, allowances } from "@shared/schema";
+import { users, allowances, deductions } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -98,5 +98,72 @@ export async function seedDefaultAllowances() {
     }
   } catch (error) {
     console.error("Error seeding default allowances:", error);
+  }
+}
+
+export async function seedDefaultDeductions() {
+  try {
+    const existingDeductions = await db.select().from(deductions);
+
+    if (existingDeductions.length === 0) {
+      const defaultDeductions = [
+        {
+          name: "Income Tax",
+          type: "tax",
+          amount: null,
+          percentage: 5,
+          isActive: 1,
+        },
+        {
+          name: "Provident Fund",
+          type: "insurance",
+          amount: null,
+          percentage: 8,
+          isActive: 1,
+        },
+        {
+          name: "Health Insurance",
+          type: "insurance",
+          amount: 2500,
+          percentage: null,
+          isActive: 1,
+        },
+        {
+          name: "Social Security",
+          type: "tax",
+          amount: null,
+          percentage: 2,
+          isActive: 1,
+        },
+        {
+          name: "Loan Repayment",
+          type: "loan",
+          amount: 5000,
+          percentage: null,
+          isActive: 1,
+        },
+        {
+          name: "Advance Recovery",
+          type: "advance",
+          amount: 3000,
+          percentage: null,
+          isActive: 1,
+        },
+        {
+          name: "Late Arrival Penalty",
+          type: "other",
+          amount: 500,
+          percentage: null,
+          isActive: 1,
+        },
+      ];
+
+      await db.insert(deductions).values(defaultDeductions);
+      console.log("✅ Default deductions created");
+    } else {
+      console.log("✅ Deductions already exist");
+    }
+  } catch (error) {
+    console.error("Error seeding default deductions:", error);
   }
 }
