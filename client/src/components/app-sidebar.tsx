@@ -1,4 +1,4 @@
-import { Home, Users, DollarSign, Clock, Gift, Settings, LogOut, User } from "lucide-react";
+import { Home, Users, DollarSign, Sliders, Settings, LogOut, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -37,15 +37,9 @@ const menuItems = [
     roles: ["admin", "manager", "viewer"],
   },
   {
-    title: "Overtime",
-    url: "/overtime",
-    icon: Clock,
-    roles: ["admin", "manager"],
-  },
-  {
-    title: "Allowances",
-    url: "/allowances",
-    icon: Gift,
+    title: "Adjustments",
+    url: "/adjustments",
+    icon: Sliders,
     roles: ["admin", "manager"],
   },
   {

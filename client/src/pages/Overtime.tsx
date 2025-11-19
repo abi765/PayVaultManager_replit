@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,8 @@ type Employee = {
 
 export default function Overtime() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "manager";
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: overtimeData, isLoading } = useQuery({
@@ -95,19 +98,21 @@ export default function Overtime() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-overtime-title">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-overtime-title">
             Overtime Management
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Track employee overtime hours and rates for accurate salary calculation
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} data-testid="button-add-overtime">
-          <Plus className="h-4 w-4" />
-          Add Overtime
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setDialogOpen(true)} data-testid="button-add-overtime" className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-1" />
+            Add Overtime
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -122,26 +127,34 @@ export default function Overtime() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {overtimeRecords.map((record: OvertimeRecord) => (
+          {overtimeRecords.map((record: OvertimeRecord) => {
+            const employee = employees.find(e => e.id === record.employeeId);
+            const employeeName = record.employeeName || employee?.fullName || `Employee #${record.employeeId}`;
+            const employeeCode = employee?.employeeId;
+
+            return (
             <Card key={record.id} data-testid={`card-overtime-${record.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-lg">
-                      {record.employeeName || `Employee #${record.employeeId}`}
+                      {employeeName}
                     </CardTitle>
                     <CardDescription>
+                      {employeeCode && <span className="font-mono">{employeeCode} • </span>}
                       {record.month} • {record.hours} hours @ {formatCurrency(record.rate)}/hour
                     </CardDescription>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => deleteOvertimeMutation.mutate(record.id)}
-                    data-testid={`button-delete-overtime-${record.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteOvertimeMutation.mutate(record.id)}
+                      data-testid={`button-delete-overtime-${record.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -161,7 +174,8 @@ export default function Overtime() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 

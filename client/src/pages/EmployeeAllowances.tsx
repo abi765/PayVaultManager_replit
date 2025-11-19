@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +69,8 @@ type Allowance = {
 
 export default function EmployeeAllowances() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "manager";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
 
@@ -169,24 +172,26 @@ export default function EmployeeAllowances() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-allowances-title">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-allowances-title">
             Employee Allowances
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Assign allowances to employees for accurate salary calculation
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} data-testid="button-add-allowance">
-          <Plus className="h-4 w-4" />
-          Assign Allowance
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setDialogOpen(true)} data-testid="button-add-allowance" className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-1" />
+            Assign Allowance
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-4 items-center">
         <Select value={selectedEmployee?.toString() || "all"} onValueChange={(value) => setSelectedEmployee(value === "all" ? null : parseInt(value))}>
-          <SelectTrigger className="w-[250px]">
+          <SelectTrigger className="w-full sm:w-[250px]">
             <SelectValue placeholder="Filter by employee" />
           </SelectTrigger>
           <SelectContent>
@@ -228,14 +233,16 @@ export default function EmployeeAllowances() {
                         {record.employeeCode && <span className="font-mono">{record.employeeCode}</span>}
                       </CardDescription>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteAllowanceMutation.mutate({ employeeId: record.employeeId, id: record.id })}
-                      data-testid={`button-delete-allowance-${record.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteAllowanceMutation.mutate({ employeeId: record.employeeId, id: record.id })}
+                        data-testid={`button-delete-allowance-${record.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">

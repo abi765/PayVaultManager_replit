@@ -11,6 +11,7 @@ import { SalaryPayment, Employee } from "@shared/schema";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -42,6 +43,8 @@ function sanitizePaymentForExport(payment: SalaryPayment & { employee?: Employee
 
 export default function Salary() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "manager";
   const currentMonth = format(new Date(), "yyyy-MM");
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -333,16 +336,16 @@ export default function Salary() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Salary Management</h1>
-          <p className="text-muted-foreground">Manage employee salary payments and records</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Salary Management</h1>
+          <p className="text-sm text-muted-foreground">Manage employee salary payments and records</p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:items-end gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2" data-testid="button-export-dropdown">
+                <Button variant="outline" className="gap-2 flex-1 sm:flex-none" data-testid="button-export-dropdown">
                   <Download className="h-4 w-4" />
                   Export
                 </Button>
@@ -362,17 +365,21 @@ export default function Salary() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              onClick={handleGenerateSalary}
-              disabled={generateMutation.isPending}
-              data-testid="button-generate-salary"
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              {generateMutation.isPending ? "Generating..." : "Generate Salary"}
-            </Button>
+            {canEdit && (
+              <Button
+                onClick={handleGenerateSalary}
+                disabled={generateMutation.isPending}
+                data-testid="button-generate-salary"
+                className="gap-2 flex-1 sm:flex-none"
+              >
+                <Plus className="h-4 w-4" />
+                {generateMutation.isPending ? "Generating..." : "Generate Salary"}
+              </Button>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground">Select a month below, then click Generate to create salary records</p>
+          {canEdit && (
+            <p className="text-xs text-muted-foreground text-center sm:text-right">Select a month below, then click Generate to create salary records</p>
+          )}
         </div>
       </div>
 
@@ -414,7 +421,7 @@ export default function Salary() {
       ) : isError ? (
         <div className="text-center py-12 text-destructive">Failed to load salary records. Please try again.</div>
       ) : (
-        <SalaryTable salaryPayments={(data as any)?.payments || []} onMarkPaid={handleMarkPaid} onDelete={handleDelete} />
+        <SalaryTable salaryPayments={(data as any)?.payments || []} onMarkPaid={handleMarkPaid} onDelete={handleDelete} canEdit={canEdit} />
       )}
 
       {/* Generate Salary Confirmation Dialog */}

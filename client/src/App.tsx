@@ -8,8 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import Dashboard from "@/pages/Dashboard";
 import Employees from "@/pages/Employees";
 import Salary from "@/pages/Salary";
-import Overtime from "@/pages/Overtime";
-import EmployeeAllowances from "@/pages/EmployeeAllowances";
+import SalaryAdjustments from "@/pages/SalaryAdjustments";
 import Settings from "@/pages/Settings";
 import Users from "@/pages/Users";
 import Login from "@/pages/Login";
@@ -42,8 +41,7 @@ function Router() {
       <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/employees">{() => <ProtectedRoute component={Employees} />}</Route>
       <Route path="/salary">{() => <ProtectedRoute component={Salary} />}</Route>
-      <Route path="/overtime">{() => <ProtectedRoute component={Overtime} />}</Route>
-      <Route path="/allowances">{() => <ProtectedRoute component={EmployeeAllowances} />}</Route>
+      <Route path="/adjustments">{() => <ProtectedRoute component={SalaryAdjustments} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
       <Route path="/users">{() => <ProtectedRoute component={Users} />}</Route>
       <Route component={NotFound} />
@@ -76,7 +74,7 @@ function AppLayout() {
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-6">
+          <main className="flex-1 overflow-auto p-4 md:p-6">
             <Router />
           </main>
         </div>
