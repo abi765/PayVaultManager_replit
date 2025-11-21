@@ -12,6 +12,16 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const departments = pgTable("departments", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  managerId: integer("manager_id"),
+  parentId: integer("parent_id"),
+  isActive: integer("is_active").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const employees = pgTable("employees", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   employeeId: text("employee_id").notNull().unique(),
@@ -22,6 +32,7 @@ export const employees = pgTable("employees", {
   bankName: text("bank_name"),
   bankBranch: text("bank_branch"),
   salary: real("salary").notNull(),
+  departmentId: integer("department_id").references(() => departments.id),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -29,6 +40,7 @@ export const employees = pgTable("employees", {
   statusIdx: index("employees_status_idx").on(table.status),
   bankAccountIdx: index("employees_bank_account_idx").on(table.bankAccountNumber),
   fullNameIdx: index("employees_full_name_idx").on(table.fullName),
+  departmentIdx: index("employees_department_idx").on(table.departmentId),
 }));
 
 export const salaryPayments = pgTable("salary_payments", {
@@ -142,6 +154,14 @@ export const insertUserSchema = createInsertSchema(users).pick({
   role: true,
 });
 
+export const insertDepartmentSchema = z.object({
+  name: z.string().min(1, "Department name is required"),
+  description: z.string().nullable().optional(),
+  managerId: z.number().nullable().optional(),
+  parentId: z.number().nullable().optional(),
+  isActive: z.number().default(1),
+});
+
 const baseEmployeeSchema = createInsertSchema(employees);
 
 export const insertEmployeeSchema = z.object({
@@ -153,6 +173,7 @@ export const insertEmployeeSchema = z.object({
   iban: z.string().regex(/^PK\d{2}[A-Z0-9]{20}$/i, "IBAN must be in Pakistani format: PK + 2 digits + 20 alphanumeric characters (total 24 characters)").nullable().optional().or(z.literal("")),
   address: z.string().nullable().optional(),
   bankBranch: z.string().nullable().optional(),
+  departmentId: z.number().nullable().optional(),
   status: z.enum(["active", "on_leave", "inactive"]).default("active"),
 });
 
@@ -232,6 +253,8 @@ export const insertLocationLogSchema = z.object({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type Department = typeof departments.$inferSelect;
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type SalaryPayment = typeof salaryPayments.$inferSelect;

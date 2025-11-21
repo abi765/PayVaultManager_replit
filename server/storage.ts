@@ -1,6 +1,6 @@
-import { 
-  type User, type InsertUser, 
-  type Employee, type InsertEmployee, 
+import {
+  type User, type InsertUser,
+  type Employee, type InsertEmployee,
   type SalaryPayment, type InsertSalaryPayment,
   type Deduction, type InsertDeduction,
   type Allowance, type InsertAllowance,
@@ -8,13 +8,14 @@ import {
   type EmployeeAllowance, type InsertEmployeeAllowance,
   type OvertimeRecord, type InsertOvertimeRecord,
   type SalaryBreakdown, type InsertSalaryBreakdown,
-  type LocationLog, type InsertLocationLog
+  type LocationLog, type InsertLocationLog,
+  type Department, type InsertDepartment
 } from "@shared/schema";
 import { db } from "./db";
-import { 
-  users, employees, salaryPayments, 
+import {
+  users, employees, salaryPayments,
   deductions, allowances, employeeDeductions, employeeAllowances,
-  overtimeRecords, salaryBreakdown, locationLogs
+  overtimeRecords, salaryBreakdown, locationLogs, departments
 } from "@shared/schema";
 import { eq, desc, and, like, sql } from "drizzle-orm";
 
@@ -77,6 +78,12 @@ export interface IStorage {
   createOvertimeRecord(overtimeRecord: InsertOvertimeRecord): Promise<OvertimeRecord>;
   updateOvertimeRecord(id: number, overtimeRecord: Partial<InsertOvertimeRecord>): Promise<OvertimeRecord | undefined>;
   deleteOvertimeRecord(id: number): Promise<boolean>;
+
+  getDepartments(): Promise<Department[]>;
+  getDepartmentById(id: number): Promise<Department | undefined>;
+  createDepartment(department: InsertDepartment): Promise<Department>;
+  updateDepartment(id: number, department: Partial<InsertDepartment>): Promise<Department | undefined>;
+  deleteDepartment(id: number): Promise<boolean>;
   
   getSalaryBreakdown(salaryPaymentId: number): Promise<SalaryBreakdown[]>;
   createSalaryBreakdown(breakdown: InsertSalaryBreakdown): Promise<SalaryBreakdown>;
@@ -295,7 +302,7 @@ export class DbStorage implements IStorage {
         total: sql<number>`count(*)`,
         active: sql<number>`count(*) filter (where status = 'active')`,
         inactive: sql<number>`count(*) filter (where status = 'inactive' or status = 'on_leave')`,
-        payroll: sql<number>`coalesce(sum(salary) filter (where status = 'active'), 0)`,
+        baseSalaryTotal: sql<number>`coalesce(sum(salary) filter (where status = 'active'), 0)`,
       })
       .from(employees);
 
@@ -304,14 +311,20 @@ export class DbStorage implements IStorage {
       .select({
         pending: sql<number>`count(*) filter (where status = 'pending' and month = ${currentMonth})`,
         processed: sql<number>`coalesce(sum(amount) filter (where status = 'paid' and month = ${currentMonth}), 0)`,
+        monthlyTotal: sql<number>`coalesce(sum(amount) filter (where month = ${currentMonth}), 0)`,
       })
       .from(salaryPayments);
+
+    // Use generated salary total if available, otherwise fall back to base salary total
+    const monthlyPayroll = Number(paymentStats?.monthlyTotal || 0) > 0
+      ? Number(paymentStats?.monthlyTotal || 0)
+      : Number(employeeStats?.baseSalaryTotal || 0);
 
     return {
       totalEmployees: Number(employeeStats?.total || 0),
       activeEmployees: Number(employeeStats?.active || 0),
       inactiveEmployees: Number(employeeStats?.inactive || 0),
-      monthlyPayroll: Number(employeeStats?.payroll || 0),
+      monthlyPayroll,
       pendingPayments: Number(paymentStats?.pending || 0),
       processedPayments: Number(paymentStats?.processed || 0),
     };
@@ -480,6 +493,30 @@ export class DbStorage implements IStorage {
 
   async deleteOvertimeRecord(id: number): Promise<boolean> {
     const result = await db.delete(overtimeRecords).where(eq(overtimeRecords.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getDepartments(): Promise<Department[]> {
+    return db.select().from(departments).where(eq(departments.isActive, 1)).orderBy(departments.name);
+  }
+
+  async getDepartmentById(id: number): Promise<Department | undefined> {
+    const [department] = await db.select().from(departments).where(eq(departments.id, id)).limit(1);
+    return department;
+  }
+
+  async createDepartment(insertDepartment: InsertDepartment): Promise<Department> {
+    const [department] = await db.insert(departments).values(insertDepartment).returning();
+    return department;
+  }
+
+  async updateDepartment(id: number, updateData: Partial<InsertDepartment>): Promise<Department | undefined> {
+    const [department] = await db.update(departments).set(updateData).where(eq(departments.id, id)).returning();
+    return department;
+  }
+
+  async deleteDepartment(id: number): Promise<boolean> {
+    const result = await db.delete(departments).where(eq(departments.id, id));
     return result.rowCount !== null && result.rowCount > 0;
   }
 

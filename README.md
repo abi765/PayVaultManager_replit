@@ -1,20 +1,7 @@
-<div align="center">
-  <table border="0">
-    <tr>
-      <td><img src="attached_assets/generated_images/PayVault_app_icon_logo_4053ec67.png" alt="PayVault Logo" width="80"/></td>
-      <td>
-        <h1>PayVault</h1>
-        <p><strong>Employee Salary Management System</strong></p>
-        <p>Streamlined salary management for Pakistani businesses</p>
-      </td>
-    </tr>
-  </table>
-
   [![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/abi765/PayVaultManager_replit/releases/tag/v1.0)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
   [![Deploy](https://img.shields.io/badge/deploy-Render-success.svg)](https://payvault-app.onrender.com)
   [![Status](https://img.shields.io/badge/status-testing-yellow.svg)](https://payvault-app.onrender.com)
-
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
   [![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
   [![Node.js](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
@@ -27,7 +14,8 @@
 
 > **⚠️ IMPORTANT NOTICE - TEST DEPLOYMENT**
 >
-> This application is currently in **TEST MODE** and deployed for testing purposes only.
+> This application is currently in **TEST MODE** and deployed for testing purposes only
+>
 > - The current deployment uses test data and configurations
 > - This is NOT ready for production use
 > - Do NOT enter real employee data or process actual salary payments yet
@@ -35,6 +23,7 @@
 > - Contact your system administrator before using this for actual business operations
 
 ## Table of Contents
+
 1. [Getting Started](#getting-started)
 2. [Login](#login)
 3. [Dashboard Overview](#dashboard-overview)
@@ -55,14 +44,17 @@ PayVault is an employee salary management system designed for Pakistani business
 ### Accessing the Application
 
 **Test Deployment:**
+
 - **Live App:** [https://payvault-app.onrender.com](https://payvault-app.onrender.com)
 - **Status:** Testing Phase - Not for Production Use
 
 **Local Development:**
+
 - **URL:** `http://localhost:5000`
 - **Use for:** Development and testing
 
 **Steps to Access:**
+
 1. Open your web browser
 2. Click on the link above or navigate to the URL
 3. You will be redirected to the login page
@@ -136,6 +128,7 @@ The dashboard displays:
 ### Navigation Sidebar
 
 The left sidebar contains navigation to all main sections:
+
 - **Dashboard** - Overview and statistics
 - **Employees** - Manage employee records
 - **Salary** - Process and manage salary payments
@@ -267,6 +260,7 @@ To see detailed breakdown of a salary payment:
 ### Exporting Salary Records
 
 You can export salary records to:
+
 - **CSV** - For Excel/spreadsheet analysis
 - **PDF** - For printing and reports
 
@@ -445,6 +439,7 @@ You can export salary records to:
 4. You'll see a success message
 
 **Security Tips:**
+
 - Use a strong password with mix of letters, numbers, and symbols
 - Change password regularly
 - Never share your password with others
@@ -456,17 +451,20 @@ You can export salary records to:
 ### Monthly Salary Processing Workflow
 
 **Step 1: Prepare Data**
+
 1. Ensure all active employees are up to date
 2. Add overtime records for the month
 3. Review and update deductions/allowances if needed
 
 **Step 2: Generate Salaries**
+
 1. Go to **Salary** section
 2. Select the current month
 3. Click **Generate Salary**
 4. Review the generated salary records
 
 **Step 3: Review Individual Salaries**
+
 1. Click on each salary record
 2. Review the breakdown:
    - Base Salary
@@ -477,18 +475,21 @@ You can export salary records to:
 3. Make corrections if needed
 
 **Step 4: Process Payments**
+
 1. After salary approval, mark each salary as "Paid"
 2. Select payment method and date
 3. Add notes if required
 4. Confirm payment
 
 **Step 5: Export Records**
+
 1. Export salary records to CSV/PDF for accounting
 2. Keep records for audit purposes
 
 ### Onboarding a New Employee
 
 **Step 1: Create Employee Record**
+
 1. Go to **Employees**
 2. Click **Add Employee**
 3. Fill in all required information
@@ -496,16 +497,19 @@ You can export salary records to:
 5. Save the employee
 
 **Step 2: Assign Allowances**
+
 1. Open the employee record
 2. Add applicable allowances (Housing, Transport, etc.)
 3. Save changes
 
 **Step 3: Assign Deductions**
+
 1. In the same employee record
 2. Add applicable deductions (Tax, Insurance, etc.)
 3. Save changes
 
 **Step 4: Verify Setup**
+
 1. Go to **Salary** section
 2. Run a test salary calculation for the employee's month
 3. Review the breakdown to ensure correctness
@@ -513,12 +517,14 @@ You can export salary records to:
 ### End of Month Reporting
 
 **Step 1: Export Salary Data**
+
 1. Go to **Salary** section
 2. Filter by the completed month
 3. Filter by status "Paid"
 4. Export to CSV for accounting
 
 **Step 2: Review Dashboard Metrics**
+
 1. Go to **Dashboard**
 2. Note down key metrics:
    - Total Monthly Payroll
@@ -526,6 +532,7 @@ You can export salary records to:
    - Pending Payments
 
 **Step 3: Generate Reports**
+
 1. Export employee list if needed
 2. Export overtime records for the month
 3. Keep backup of all data
@@ -535,22 +542,26 @@ You can export salary records to:
 ## Tips and Best Practices
 
 ### Data Entry
+
 - Always use consistent formats for Employee IDs (e.g., EMP001, EMP002)
 - Double-check CNIC and bank account numbers
 - Verify email addresses for accuracy
 
 ### Salary Processing
+
 - Generate salaries only once per month to avoid duplicates
 - Review breakdown before marking as paid
 - Keep payment notes for audit trail
 
 ### Security
+
 - Change default admin password immediately
 - Create separate user accounts for each staff member
 - Assign appropriate role based on responsibilities
 - Never share login credentials
 
 ### Backup
+
 - Regularly export data to CSV
 - Keep backup of employee records
 - Maintain audit trail of salary payments
@@ -560,22 +571,26 @@ You can export salary records to:
 ## Troubleshooting
 
 ### Cannot Login
+
 - Verify username and password are correct
 - Password is case-sensitive
 - Clear browser cache and try again
 - Contact administrator for password reset
 
 ### Salary Not Showing Breakdown
+
 - Delete the salary record
 - Regenerate salary for that month
 - The breakdown will appear with the new record
 
 ### Cannot Generate Salary
+
 - Check if employees are marked as "Active"
 - Verify you have required permissions (Admin or Manager)
 - Check if salary already exists for that month/employee
 
 ### Changes Not Saving
+
 - Check your internet connection
 - Verify you have required permissions
 - Try logging out and logging back in
@@ -586,6 +601,7 @@ You can export salary records to:
 ## Support
 
 For technical issues or questions:
+
 - Check this user guide first
 - Review system logs if you're an administrator
 - Contact your system administrator
