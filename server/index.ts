@@ -8,7 +8,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { seedTestUser, seedDefaultAllowances, seedDefaultDeductions } from "./seed";
+import { seedTestUser, seedDefaultAllowances, seedDefaultDeductions, seedDefaultDepartments } from "./seed";
 import { validateEnv } from "./env";
 
 // Validate environment variables on startup
@@ -108,6 +108,7 @@ app.use((req, res, next) => {
   await seedTestUser();
   await seedDefaultAllowances();
   await seedDefaultDeductions();
+  await seedDefaultDepartments();
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

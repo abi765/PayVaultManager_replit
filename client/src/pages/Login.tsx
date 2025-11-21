@@ -39,9 +39,21 @@ export default function Login() {
       console.log(`[CLIENT] Login successful - userId: ${userId}, username: ${loggedInUsername}, role: ${role}`);
 
       login(userId, loggedInUsername, role);
+
+      const roleLabels: Record<string, string> = {
+        admin: "Administrator",
+        manager: "Manager",
+        viewer: "Viewer",
+      };
+
+      // Extract first name from username (format: firstname.lastname) and capitalize it
+      const firstName = loggedInUsername.split('.')[0];
+      const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+
       toast({
-        title: "Login successful",
-        description: `Welcome to PayVault, ${loggedInUsername}`,
+        title: `👋 Welcome back, ${capitalizedFirstName}!`,
+        description: `You are logged in as ${roleLabels[role] || role}. Have a productive session!`,
+        duration: 5000,
       });
     } catch (error: any) {
       console.log(`[CLIENT] Login error:`, error.message);
@@ -74,11 +86,16 @@ export default function Login() {
               <Input
                 id="username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
+                onChange={(e) => {
+                  // Only allow lowercase letters and dots
+                  const value = e.target.value.toLowerCase().replace(/[^a-z.]/g, '');
+                  setUsername(value);
+                }}
+                placeholder="john.doe"
                 data-testid="input-username"
                 required
               />
+              <p className="text-xs text-muted-foreground">Lowercase letters and dots only</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

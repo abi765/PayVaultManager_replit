@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, allowances, deductions } from "@shared/schema";
+import { users, allowances, deductions, departments, employees } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -165,5 +165,80 @@ export async function seedDefaultDeductions() {
     }
   } catch (error) {
     console.error("Error seeding default deductions:", error);
+  }
+}
+
+export async function seedDefaultDepartments() {
+  try {
+    const existingDepartments = await db.select().from(departments);
+    const targetDepartments = ["Executives", "Directors", "Finance", "Managers", "HR", "Coders"];
+
+    // Check if we need to update to the new simplified structure
+    const existingNames = existingDepartments.map(d => d.name);
+    const needsUpdate = !targetDepartments.every(name => existingNames.includes(name)) || existingDepartments.length !== 6;
+
+    if (existingDepartments.length === 0 || needsUpdate) {
+      // Clear existing departments if updating
+      if (existingDepartments.length > 0) {
+        // First, clear all employee department references
+        await db.update(employees).set({ departmentId: null });
+        // Then delete departments
+        await db.delete(departments);
+        console.log("🔄 Clearing old departments for new structure");
+      }
+
+      // First insert Executives (top level - CEO)
+      const [executives] = await db.insert(departments).values({
+        name: "Executives",
+        description: "CEO - Chief Executive Officer",
+        isActive: 1,
+      }).returning();
+
+      // Insert Finance (reports directly to CEO)
+      await db.insert(departments).values({
+        name: "Finance",
+        description: "Financial planning, accounting, and budgeting",
+        parentId: executives.id,
+        isActive: 1,
+      });
+
+      // Insert Directors (reports to CEO)
+      const [directors] = await db.insert(departments).values({
+        name: "Directors",
+        description: "Department directors and senior leadership",
+        parentId: executives.id,
+        isActive: 1,
+      }).returning();
+
+      // Insert HR (reports to Directors)
+      await db.insert(departments).values({
+        name: "HR",
+        description: "Human resources, recruitment, and employee relations",
+        parentId: directors.id,
+        isActive: 1,
+      });
+
+      // Insert Managers (reports to Directors)
+      const [managers] = await db.insert(departments).values({
+        name: "Managers",
+        description: "Team managers and project leads",
+        parentId: directors.id,
+        isActive: 1,
+      }).returning();
+
+      // Insert Coders (report to Managers)
+      await db.insert(departments).values({
+        name: "Coders",
+        description: "Software developers and engineers",
+        parentId: managers.id,
+        isActive: 1,
+      });
+
+      console.log("✅ Department structure created (6 departments)");
+    } else {
+      console.log("✅ Departments already configured");
+    }
+  } catch (error) {
+    console.error("Error seeding default departments:", error);
   }
 }

@@ -40,11 +40,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2 } from "lucide-react";
 
 const createUserSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
+  firstName: z.string().min(2, "First name must be at least 2 characters").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   email: z.string().email("Invalid email address").optional(),
   role: z.enum(["admin", "manager", "viewer"]).default("viewer"),
 });
+
+// Helper function to capitalize first letter
+const capitalizeFirstLetter = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
 
 type User = {
   id: string;
@@ -239,7 +245,8 @@ function CreateUserDialog({
   const form = useForm<z.infer<typeof createUserSchema>>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
-      username: "",
+      firstName: "",
+      lastName: "",
       password: "",
       email: "",
       role: "viewer",
@@ -248,7 +255,14 @@ function CreateUserDialog({
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof createUserSchema>) => {
-      return await apiRequest("POST", "/api/users", data);
+      // Generate username from first.last in lowercase
+      const username = `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}`;
+      return await apiRequest("POST", "/api/users", {
+        username,
+        password: data.password,
+        email: data.email,
+        role: data.role,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -306,19 +320,50 @@ function CreateUserDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., john.doe" {...field} data-testid="input-username" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="John"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value.replace(/[^a-zA-Z]/g, ''))}
+                        data-testid="input-firstname"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Doe"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value.replace(/[^a-zA-Z]/g, ''))}
+                        data-testid="input-lastname"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {form.watch("firstName") && form.watch("lastName") && (
+              <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                Username will be: <span className="font-mono font-medium">{form.watch("firstName").toLowerCase()}.{form.watch("lastName").toLowerCase()}</span>
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -424,8 +469,18 @@ function CreateUserDialog({
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <p className="text-muted-foreground">First Name</p>
+                  <p className="font-medium">{pendingData?.firstName && capitalizeFirstLetter(pendingData.firstName)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Last Name</p>
+                  <p className="font-medium">{pendingData?.lastName && capitalizeFirstLetter(pendingData.lastName)}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <p className="text-muted-foreground">Username</p>
-                  <p className="font-medium font-mono">{pendingData?.username}</p>
+                  <p className="font-medium font-mono">{pendingData?.firstName?.toLowerCase()}.{pendingData?.lastName?.toLowerCase()}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Email</p>

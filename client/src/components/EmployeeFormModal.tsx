@@ -8,8 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2 } from "lucide-react";
 import { PAKISTANI_BANKS } from "@/lib/constants";
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Employee, insertEmployeeSchema } from "@shared/schema";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Employee, insertEmployeeSchema, Department } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -33,7 +33,12 @@ export default function EmployeeFormModal({ open, onOpenChange, employee }: Empl
     bankName: "",
     bankBranch: "",
     salary: "",
+    departmentId: "" as string,
     status: "active" as "active" | "on_leave" | "inactive",
+  });
+
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["/api/departments"],
   });
 
   useEffect(() => {
@@ -47,6 +52,7 @@ export default function EmployeeFormModal({ open, onOpenChange, employee }: Empl
         bankName: employee.bankName || "",
         bankBranch: employee.bankBranch || "",
         salary: employee.salary?.toString() || "",
+        departmentId: employee.departmentId?.toString() || "",
         status: (employee.status as "active" | "on_leave" | "inactive") || "active",
       });
     } else if (open && !employee) {
@@ -59,6 +65,7 @@ export default function EmployeeFormModal({ open, onOpenChange, employee }: Empl
         bankName: "",
         bankBranch: "",
         salary: "",
+        departmentId: "",
         status: "active",
       });
     }
@@ -128,6 +135,7 @@ export default function EmployeeFormModal({ open, onOpenChange, employee }: Empl
         address: formData.address || null,
         iban: formData.iban || null,
         bankBranch: formData.bankBranch || null,
+        departmentId: formData.departmentId ? Number(formData.departmentId) : null,
       });
 
       // For updates, submit directly. For new employees, show confirmation
@@ -292,6 +300,23 @@ export default function EmployeeFormModal({ open, onOpenChange, employee }: Empl
               />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="department">Department</Label>
+              <Select value={formData.departmentId} onValueChange={(value) => setFormData({ ...formData, departmentId: value })}>
+                <SelectTrigger id="department" data-testid="select-department">
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id.toString()}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              </div>
+            </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="status">Status *</Label>
               <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
                 <SelectTrigger id="status" data-testid="select-status">
@@ -304,7 +329,6 @@ export default function EmployeeFormModal({ open, onOpenChange, employee }: Empl
                 </SelectContent>
               </Select>
               </div>
-            </div>
 
               <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-testid="button-cancel" disabled={isSubmitting}>
@@ -389,6 +413,10 @@ export default function EmployeeFormModal({ open, onOpenChange, employee }: Empl
               <div>
                 <p className="text-muted-foreground">Monthly Salary</p>
                 <p className="font-medium text-lg text-primary">{formatCurrency(Number(formData.salary))}</p>
+                </div>
+              <div>
+                <p className="text-muted-foreground">Department</p>
+                <p className="font-medium">{departments.find(d => d.id.toString() === formData.departmentId)?.name || "Not assigned"}</p>
                 </div>
               <div>
                 <p className="text-muted-foreground">Status</p>

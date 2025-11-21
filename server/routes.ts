@@ -3,9 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth, requireRole } from "./auth";
 import bcrypt from "bcrypt";
-import { 
+import {
   insertUserSchema,
-  insertEmployeeSchema, 
+  insertEmployeeSchema,
   insertSalaryPaymentSchema,
   insertDeductionSchema,
   insertAllowanceSchema,
@@ -13,6 +13,7 @@ import {
   insertEmployeeAllowanceSchema,
   insertOvertimeRecordSchema,
   insertLocationLogSchema,
+  insertDepartmentSchema,
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
@@ -335,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             salaryPaymentId: payment.id,
             componentType: "deduction",
             componentName: deduction.name,
-            amount: -deduction.amount,
+            amount: deduction.amount,
             calculationDetails: deduction.details,
           });
         }
@@ -544,6 +545,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const success = await storage.deleteAllowance(id);
       if (!success) {
         return res.status(404).json({ message: "Allowance not found" });
+      }
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Department routes
+  app.get("/api/departments", requireAuth, async (req, res) => {
+    try {
+      const departments = await storage.getDepartments();
+      res.json(departments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/departments/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const department = await storage.getDepartmentById(id);
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      res.json(department);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/departments", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const validation = insertDepartmentSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const department = await storage.createDepartment(validation.data);
+      res.status(201).json(department);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/departments/:id", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validation = insertDepartmentSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: fromZodError(validation.error).message });
+      }
+      const department = await storage.updateDepartment(id, validation.data);
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      res.json(department);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/departments/:id", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteDepartment(id);
+      if (!success) {
+        return res.status(404).json({ message: "Department not found" });
       }
       res.status(204).send();
     } catch (error: any) {

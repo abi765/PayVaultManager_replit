@@ -1,4 +1,4 @@
-import { Home, Users, DollarSign, Sliders, Settings, LogOut, User } from "lucide-react";
+import { Home, Users, DollarSign, Sliders, Settings, LogOut, User, Building2 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +28,12 @@ const menuItems = [
     title: "Employees",
     url: "/employees",
     icon: Users,
+    roles: ["admin", "manager", "viewer"],
+  },
+  {
+    title: "Organization",
+    url: "/organization",
+    icon: Building2,
     roles: ["admin", "manager", "viewer"],
   },
   {
