@@ -1,4 +1,4 @@
-  [![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/abi765/PayVaultManager_replit/releases/tag/v1.0)
+  [![Version](https://img.shields.io/badge/version-1.2-blue.svg)](https://github.com/abi765/PayVaultManager_replit/releases/tag/v1.2.0)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
   [![Deploy](https://img.shields.io/badge/deploy-Render-success.svg)](https://payvault-app.onrender.com)
   [![Status](https://img.shields.io/badge/status-testing-yellow.svg)](https://payvault-app.onrender.com)
@@ -27,13 +27,14 @@
 1. [Getting Started](#getting-started)
 2. [Login](#login)
 3. [Dashboard Overview](#dashboard-overview)
-4. [Managing Employees](#managing-employees)
-5. [Salary Management](#salary-management)
-6. [Overtime Management](#overtime-management)
-7. [Deductions & Allowances](#deductions--allowances)
-8. [User Management](#user-management)
-9. [Settings](#settings)
-10. [Common Workflows](#common-workflows)
+4. [Organization Structure](#organization-structure)
+5. [Managing Employees](#managing-employees)
+6. [Salary Management](#salary-management)
+7. [Overtime Management](#overtime-management)
+8. [Deductions & Allowances](#deductions--allowances)
+9. [User Management](#user-management)
+10. [Settings](#settings)
+11. [Common Workflows](#common-workflows)
 
 ---
 
@@ -83,6 +84,22 @@ PayVault is an employee salary management system designed for Pakistani business
 
 > **Note:** For testing only. Change passwords before using for real business.
 
+### Username Format
+
+Usernames must follow the format: `firstname.lastname`
+
+- **Only lowercase letters and dots allowed**
+- Examples: `john.doe`, `sarah.smith`, `ali.khan`
+- No spaces, underscores, hyphens, or numbers
+
+### Welcome Message
+
+After successful login, you'll see a personalized welcome toast:
+
+- Displays your first name (capitalized)
+- Shows your role (Administrator, Manager, or Viewer)
+- Example: "Welcome back, John! You are logged in as Administrator."
+
 ### User Roles
 
 PayVault has three user roles with different permissions:
@@ -131,12 +148,69 @@ The left sidebar contains navigation to all main sections:
 
 - **Dashboard** - Overview and statistics
 - **Employees** - Manage employee records
-- **Salary** - Process and manage salary payments
-- **Overtime** - Track and manage overtime hours
-- **Deductions** - Manage salary deductions
-- **Allowances** - Manage salary allowances
+- **Organization** - View department hierarchy and structure
+- **Salary Management** - Process and manage salary payments
+- **Adjustments** - Manage allowances and deductions (Admin/Manager)
+- **Settings** - Account settings and password change (Admin)
 - **Users** - Manage system users (Admin only)
-- **Settings** - Account settings and password change
+
+---
+
+## Organization Structure
+
+The Organization page provides a visual hierarchical view of your company's department structure and employee distribution.
+
+### Department Hierarchy
+
+PayVault comes with a pre-configured department structure:
+
+```text
+Executives (CEO)
+├── Finance
+└── Directors
+    ├── HR
+    └── Managers
+        └── Coders
+```
+
+### Department Colors
+
+Each department is color-coded for easy identification:
+
+| Department | Color |
+|------------|-------|
+| **Executives** | Blue |
+| **Directors** | Indigo |
+| **Finance** | Green |
+| **Managers** | Purple |
+| **HR** | Amber |
+| **Coders** | Cyan |
+
+### Organization Page Features
+
+1. **Summary Statistics**
+   - Total number of departments
+   - Total employees
+   - Assigned employees (employees with departments)
+
+2. **Org Chart Visualization**
+   - Hierarchical tree view of departments
+   - Employee count badges on each department
+   - Employee avatars showing initials
+   - Salary information for each employee
+
+3. **Unassigned Employees**
+   - List of employees not assigned to any department
+   - Status badges (Active, On Leave, Inactive)
+
+### Assigning Employees to Departments
+
+1. Go to **Employees** section
+2. Click **Add Employee** or edit existing employee
+3. Select a **Department** from the dropdown
+4. Click **Save**
+
+The employee will now appear in the Organization chart under their assigned department.
 
 ---
 
@@ -409,11 +483,20 @@ You can export salary records to:
 1. Click **Users** in the sidebar
 2. Click **Create User** button
 3. Fill in the user information:
-   - **Username** - Unique username for login
-   - **Email** - User's email address
-   - **Password** - Initial password (user should change after first login)
+   - **First Name** - User's first name (letters only)
+   - **Last Name** - User's last name (letters only)
+   - **Email** - User's email address (optional)
+   - **Password** - Initial password (minimum 6 characters)
    - **Role** - Select role (Admin, Manager, or Viewer)
-4. Click **Create User**
+4. The username will be automatically generated as `firstname.lastname` (lowercase)
+5. Review the confirmation dialog with user details
+6. Click **Confirm & Create User**
+
+**Example:**
+
+- First Name: `John`
+- Last Name: `Doe`
+- Generated Username: `john.doe`
 
 ### Deleting a User
 
@@ -610,4 +693,4 @@ For technical issues or questions:
 ---
 
 **PayVault - Employee Salary Management System**
-Version 1.0 | Last Updated: November 2025
+Version 1.2 | Last Updated: November 2025
