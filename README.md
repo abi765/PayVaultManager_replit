@@ -1,4 +1,4 @@
-  [![Version](https://img.shields.io/badge/version-1.2-blue.svg)](https://github.com/abi765/PayVaultManager_replit/releases/tag/v1.2.0)
+  [![Version](https://img.shields.io/badge/version-1.3-blue.svg)](https://github.com/abi765/PayVaultManager_replit/releases/tag/v1.3.0)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
   [![Deploy](https://img.shields.io/badge/deploy-Render-success.svg)](https://payvault-app.onrender.com)
   [![Status](https://img.shields.io/badge/status-testing-yellow.svg)](https://payvault-app.onrender.com)
@@ -33,8 +33,9 @@
 7. [Overtime Management](#overtime-management)
 8. [Deductions & Allowances](#deductions--allowances)
 9. [User Management](#user-management)
-10. [Settings](#settings)
-11. [Common Workflows](#common-workflows)
+10. [Activity Logs](#activity-logs)
+11. [Settings](#settings)
+12. [Common Workflows](#common-workflows)
 
 ---
 
@@ -151,8 +152,9 @@ The left sidebar contains navigation to all main sections:
 - **Organization** - View department hierarchy and structure
 - **Salary Management** - Process and manage salary payments
 - **Adjustments** - Manage allowances and deductions (Admin/Manager)
-- **Settings** - Account settings and password change (Admin)
+- **Settings** - Account settings and password change
 - **Users** - Manage system users (Admin only)
+- **Activity Logs** - Audit trail of all user actions (Admin only)
 
 ---
 
@@ -333,15 +335,36 @@ To see detailed breakdown of a salary payment:
 
 ### Exporting Salary Records
 
-You can export salary records to:
+You can export salary records to multiple formats:
 
-- **CSV** - For Excel/spreadsheet analysis
-- **PDF** - For printing and reports
+- **CSV** - For spreadsheet analysis
+- **Excel** - For detailed Excel workbooks
+- **PDF** - For printing and reports (landscape format)
 
-1. Filter the salary records as needed
-2. Click the **Export** button
-3. Select format (CSV or PDF)
-4. The file will be downloaded
+**Export Features:**
+
+- All formats include **IBAN** column for bank transfers
+- **Bank Filter** - Export salaries by specific bank name
+- File names include filters applied (month, status, bank)
+
+**To Export:**
+
+1. Filter the salary records as needed (month, status)
+2. Optionally select a specific bank from the **Bank Filter** dropdown
+3. Click the **Export** dropdown button
+4. Select format (CSV, Excel, or PDF)
+5. The file will be downloaded with relevant data
+
+**Export Contents:**
+
+Each export includes:
+
+- Employee ID and Name
+- Month and Amount
+- Payment Status and Date
+- Payment Method
+- Bank Name, Account Number, and **IBAN**
+- Notes
 
 ---
 
@@ -506,6 +529,73 @@ You can export salary records to:
 4. Confirm deletion
 
 **Warning:** You cannot delete your own user account while logged in.
+
+---
+
+## Activity Logs
+
+**Admin only**
+
+The Activity Logs page provides a comprehensive audit trail of all user actions in the system, helping administrators monitor usage and investigate issues.
+
+### Viewing Activity Logs
+
+1. Click **Activity Logs** in the sidebar (Admin only)
+2. View the list of all activities with:
+   - Timestamp
+   - Username
+   - User Role
+   - Action Type
+   - Entity (Employee, Salary, etc.)
+   - Details
+   - IP Address
+
+### Activity Actions
+
+The system tracks these actions:
+
+| Action | Description |
+|--------|-------------|
+| **LOGIN** | User logged into the system |
+| **LOGOUT** | User logged out |
+| **CREATE** | New record created (employee, user, etc.) |
+| **UPDATE** | Existing record modified |
+| **DELETE** | Record deleted |
+| **PROCESS** | Salary marked as paid |
+| **GENERATE** | Salaries generated for a month |
+| **EXPORT** | Data exported to file |
+
+### Filtering Activity Logs
+
+Use the filter panel to narrow down results:
+
+1. **Search** - Search by username or details
+2. **Action** - Filter by specific action type
+3. **Entity** - Filter by entity type (User, Employee, Salary, etc.)
+4. **Start Date** - Show logs from this date
+5. **End Date** - Show logs until this date
+6. Click **Clear** to reset all filters
+
+### Exporting Activity Logs
+
+1. Apply desired filters
+2. Click **Export CSV** button
+3. A CSV file will be downloaded containing:
+   - Timestamp
+   - Username
+   - Role
+   - Action
+   - Entity
+   - Entity ID
+   - Details
+   - IP Address
+
+**Use Cases:**
+
+- Security audits and compliance
+- Tracking who made specific changes
+- Investigating data discrepancies
+- Monitoring system usage patterns
 
 ---
 
@@ -693,4 +783,4 @@ For technical issues or questions:
 ---
 
 **PayVault - Employee Salary Management System**
-Version 1.2 | Last Updated: November 2025
+Version 1.3 | Last Updated: November 2025
