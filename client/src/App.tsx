@@ -12,6 +12,7 @@ import SalaryAdjustments from "@/pages/SalaryAdjustments";
 import Organization from "@/pages/Organization";
 import Settings from "@/pages/Settings";
 import Users from "@/pages/Users";
+import ActivityLogs from "@/pages/ActivityLogs";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/organization">{() => <ProtectedRoute component={Organization} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
       <Route path="/users">{() => <ProtectedRoute component={Users} />}</Route>
+      <Route path="/activity-logs">{() => <ProtectedRoute component={ActivityLogs} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,4 +1,4 @@
-import { Home, Users, DollarSign, Sliders, Settings, LogOut, User, Building2 } from "lucide-react";
+import { Home, Users, DollarSign, Sliders, Settings, LogOut, User, Building2, Activity } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -58,6 +58,12 @@ const menuItems = [
     title: "Users",
     url: "/users",
     icon: User,
+    roles: ["admin"],
+  },
+  {
+    title: "Activity Logs",
+    url: "/activity-logs",
+    icon: Activity,
     roles: ["admin"],
   },
 ];

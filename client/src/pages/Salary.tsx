@@ -48,6 +48,7 @@ export default function Salary() {
   const currentMonth = format(new Date(), "yyyy-MM");
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [bankFilter, setBankFilter] = useState<string>("all");
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   
   const { data, isLoading, isError } = useQuery<{ payments: (SalaryPayment & { employee?: Employee })[]; total: number }>({
@@ -66,6 +67,22 @@ export default function Salary() {
 
   const activeEmployeesCount = (employeesData as any)?.employees?.filter((emp: Employee) => emp.status === "active").length || 0;
   const existingSalariesForMonth = (data as any)?.payments?.filter((p: SalaryPayment) => p.month === selectedMonth).length || 0;
+
+  // Get unique bank names for filter dropdown
+  const uniqueBankNames = Array.from(
+    new Set(
+      ((data as any)?.payments || [])
+        .map((p: any) => p.employee?.bankName)
+        .filter((name: string | undefined) => name && name.trim() !== "")
+    )
+  ).sort() as string[];
+
+  // Get payments filtered by bank
+  const getFilteredPayments = () => {
+    const payments = (data as any)?.payments || [];
+    if (bankFilter === "all") return payments;
+    return payments.filter((p: any) => p.employee?.bankName === bankFilter);
+  };
 
   const generateMutation = useMutation({
     mutationFn: async ({ month, replaceExisting }: { month: string; replaceExisting: boolean }) => {
@@ -170,7 +187,7 @@ export default function Salary() {
   };
 
   const exportToCSV = () => {
-    const payments = (data as any)?.payments || [];
+    const payments = getFilteredPayments();
     if (payments.length === 0) {
       toast({
         title: "No data to export",
@@ -192,13 +209,15 @@ export default function Salary() {
         "Payment Method": sanitized.paymentMethod,
         "Bank Name": sanitized.bankName,
         "Account Number": sanitized.accountNumber,
+        "IBAN": sanitized.iban,
         "Notes": sanitized.notes,
       };
     });
 
     const escapeCSV = (value: any): string => {
-      const str = String(value);
-      if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+      const str = String(value).trim();
+      // Escape formula injection and special characters
+      if (/^[=+@-]/.test(str) || str.includes('"') || str.includes(',') || str.includes('\n')) {
         return `"${str.replace(/"/g, '""')}"`;
       }
       return str;
@@ -213,19 +232,19 @@ export default function Salary() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    const filename = `salary-report-${selectedMonth}${statusFilter !== "all" ? `-${statusFilter}` : ""}.csv`;
+    const filename = `salary-report-${selectedMonth}${statusFilter !== "all" ? `-${statusFilter}` : ""}${bankFilter !== "all" ? `-${bankFilter.replace(/\s+/g, "-")}` : ""}.csv`;
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
 
     toast({
       title: "Export successful",
-      description: "CSV file downloaded successfully",
+      description: `CSV file downloaded successfully${bankFilter !== "all" ? ` (filtered by ${bankFilter})` : ""}`,
     });
   };
 
   const exportToExcel = () => {
-    const payments = (data as any)?.payments || [];
+    const payments = getFilteredPayments();
     if (payments.length === 0) {
       toast({
         title: "No data to export",
@@ -255,7 +274,7 @@ export default function Salary() {
     const ws = XLSX.utils.json_to_sheet(excelData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Salary Report");
-    
+
     ws["!cols"] = [
       { wch: 12 },
       { wch: 25 },
@@ -270,17 +289,17 @@ export default function Salary() {
       { wch: 30 },
     ];
 
-    const filename = `salary-report-${selectedMonth}${statusFilter !== "all" ? `-${statusFilter}` : ""}.xlsx`;
+    const filename = `salary-report-${selectedMonth}${statusFilter !== "all" ? `-${statusFilter}` : ""}${bankFilter !== "all" ? `-${bankFilter.replace(/\s+/g, "-")}` : ""}.xlsx`;
     XLSX.writeFile(wb, filename);
 
     toast({
       title: "Export successful",
-      description: "Excel file downloaded successfully",
+      description: `Excel file downloaded successfully${bankFilter !== "all" ? ` (filtered by ${bankFilter})` : ""}`,
     });
   };
 
   const exportToPDF = () => {
-    const payments = (data as any)?.payments || [];
+    const payments = getFilteredPayments();
     if (payments.length === 0) {
       toast({
         title: "No data to export",
@@ -290,13 +309,16 @@ export default function Salary() {
       return;
     }
 
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: "landscape" });
 
     doc.setFontSize(18);
     doc.text("Salary Report", 14, 22);
     doc.setFontSize(11);
     doc.text(`Period: ${format(new Date(selectedMonth + "-01"), "MMMM yyyy")}`, 14, 32);
     doc.text(`Generated: ${format(new Date(), "yyyy-MM-dd HH:mm")}`, 14, 38);
+    if (bankFilter !== "all") {
+      doc.text(`Bank: ${bankFilter}`, 14, 44);
+    }
 
     const tableData = payments.map((payment: any) => {
       const sanitized = sanitizePaymentForExport(payment);
@@ -308,15 +330,19 @@ export default function Salary() {
         sanitized.paymentDate,
         sanitized.bankName,
         sanitized.accountNumber,
+        sanitized.iban,
       ];
     });
 
     autoTable(doc, {
-      head: [["ID", "Name", "Amount", "Status", "Paid On", "Bank", "Account"]],
+      head: [["ID", "Name", "Amount", "Status", "Paid On", "Bank", "Account", "IBAN"]],
       body: tableData,
-      startY: 45,
-      styles: { fontSize: 8 },
+      startY: bankFilter !== "all" ? 50 : 45,
+      styles: { fontSize: 7 },
       headStyles: { fillColor: [79, 70, 229] },
+      columnStyles: {
+        7: { cellWidth: 50 }, // IBAN column wider
+      },
     });
 
     const totalAmount = payments.reduce((sum: number, p: any) => sum + p.amount, 0);
@@ -325,12 +351,12 @@ export default function Salary() {
     doc.text(`Total Amount: ${formatCurrency(totalAmount)}`, 14, finalY + 10);
     doc.text(`Total Records: ${payments.length}`, 14, finalY + 16);
 
-    const filename = `salary-report-${selectedMonth}${statusFilter !== "all" ? `-${statusFilter}` : ""}.pdf`;
+    const filename = `salary-report-${selectedMonth}${statusFilter !== "all" ? `-${statusFilter}` : ""}${bankFilter !== "all" ? `-${bankFilter.replace(/\s+/g, "-")}` : ""}.pdf`;
     doc.save(filename);
 
     toast({
       title: "Export successful",
-      description: "PDF file downloaded successfully",
+      description: `PDF file downloaded successfully${bankFilter !== "all" ? ` (filtered by ${bankFilter})` : ""}`,
     });
   };
 
@@ -411,6 +437,22 @@ export default function Salary() {
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="paid">Paid</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-auto sm:min-w-[200px]">
+          <Select value={bankFilter} onValueChange={setBankFilter}>
+            <SelectTrigger data-testid="select-bank-filter">
+              <SelectValue placeholder="Filter by bank" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Banks</SelectItem>
+              {uniqueBankNames.map((bankName) => (
+                <SelectItem key={bankName} value={bankName}>
+                  {bankName}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
