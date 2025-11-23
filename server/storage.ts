@@ -9,15 +9,16 @@ import {
   type OvertimeRecord, type InsertOvertimeRecord,
   type SalaryBreakdown, type InsertSalaryBreakdown,
   type LocationLog, type InsertLocationLog,
-  type Department, type InsertDepartment
+  type Department, type InsertDepartment,
+  type ActivityLog, type InsertActivityLog
 } from "@shared/schema";
 import { db } from "./db";
 import {
   users, employees, salaryPayments,
   deductions, allowances, employeeDeductions, employeeAllowances,
-  overtimeRecords, salaryBreakdown, locationLogs, departments
+  overtimeRecords, salaryBreakdown, locationLogs, departments, activityLogs
 } from "@shared/schema";
-import { eq, desc, and, like, sql } from "drizzle-orm";
+import { eq, desc, and, like, sql, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -90,7 +91,19 @@ export interface IStorage {
   
   createLocationLog(locationLog: Omit<InsertLocationLog, 'timestamp'> & { timestamp?: Date }): Promise<LocationLog>;
   getLocationLogs(options?: { employeeId?: number; limit?: number }): Promise<LocationLog[]>;
-  
+
+  createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
+  getActivityLogs(options?: {
+    limit?: number;
+    offset?: number;
+    userId?: string;
+    action?: string;
+    entity?: string;
+    startDate?: Date;
+    endDate?: Date;
+    search?: string;
+  }): Promise<{ logs: ActivityLog[]; total: number }>;
+
   calculateSalary(employeeId: number, month: string): Promise<{
     baseSalary: number;
     allowances: { name: string; amount: number; details: string }[];
@@ -641,6 +654,58 @@ export class DbStorage implements IStorage {
       totalAllowances,
       totalDeductions,
       netSalary,
+    };
+  }
+
+  async createActivityLog(log: InsertActivityLog): Promise<ActivityLog> {
+    const [activityLog] = await db.insert(activityLogs).values(log).returning();
+    return activityLog;
+  }
+
+  async getActivityLogs(options?: {
+    limit?: number;
+    offset?: number;
+    userId?: string;
+    action?: string;
+    entity?: string;
+    startDate?: Date;
+    endDate?: Date;
+    search?: string;
+  }): Promise<{ logs: ActivityLog[]; total: number }> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
+
+    const conditions = [];
+
+    if (options?.userId) {
+      conditions.push(eq(activityLogs.userId, options.userId));
+    }
+    if (options?.action) {
+      conditions.push(eq(activityLogs.action, options.action));
+    }
+    if (options?.entity) {
+      conditions.push(eq(activityLogs.entity, options.entity));
+    }
+    if (options?.startDate) {
+      conditions.push(gte(activityLogs.timestamp, options.startDate));
+    }
+    if (options?.endDate) {
+      conditions.push(lte(activityLogs.timestamp, options.endDate));
+    }
+    if (options?.search) {
+      conditions.push(sql`(${activityLogs.details} ILIKE ${`%${options.search}%`} OR ${activityLogs.username} ILIKE ${`%${options.search}%`})`);
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [logList, countResult] = await Promise.all([
+      db.select().from(activityLogs).where(whereClause).orderBy(desc(activityLogs.timestamp)).limit(limit).offset(offset),
+      db.select({ count: sql<number>`count(*)` }).from(activityLogs).where(whereClause),
+    ]);
+
+    return {
+      logs: logList,
+      total: Number(countResult[0]?.count || 0),
     };
   }
 }

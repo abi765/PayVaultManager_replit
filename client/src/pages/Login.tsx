@@ -18,8 +18,6 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    console.log(`[CLIENT] Login attempt for username: "${username}"`);
-
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -27,16 +25,12 @@ export default function Login() {
         body: JSON.stringify({ username, password }),
       });
 
-      console.log(`[CLIENT] Login response status: ${response.status}`);
-
       if (!response.ok) {
         const errorData = await response.json();
-        console.log(`[CLIENT] Login failed:`, errorData);
         throw new Error(errorData.message || "Invalid credentials");
       }
 
       const { userId, username: loggedInUsername, role } = await response.json();
-      console.log(`[CLIENT] Login successful - userId: ${userId}, username: ${loggedInUsername}, role: ${role}`);
 
       login(userId, loggedInUsername, role);
 
@@ -56,7 +50,6 @@ export default function Login() {
         duration: 5000,
       });
     } catch (error: any) {
-      console.log(`[CLIENT] Login error:`, error.message);
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials",

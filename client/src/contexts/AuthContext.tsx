@@ -23,15 +23,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
-    console.log(`[AUTH] Initializing - userId in localStorage: ${userId ? 'exists' : 'none'}`);
 
     if (userId) {
-      console.log(`[AUTH] Validating userId: ${userId}`);
       fetch("/api/auth/me", {
         headers: { "x-user-id": userId },
       })
         .then((res) => {
-          console.log(`[AUTH] Validation response status: ${res.status}`);
           if (!res.ok) {
             throw new Error("Authentication failed");
           }
@@ -39,7 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         .then((data) => {
           if (data.user) {
-            console.log(`[AUTH] User validated: ${data.user.username} (${data.user.role})`);
             setUser({
               id: data.user.id,
               username: data.user.username,
@@ -49,8 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error("Invalid user data");
           }
         })
-        .catch((error) => {
-          console.log(`[AUTH] Validation failed, clearing session:`, error.message);
+        .catch(() => {
           localStorage.removeItem("userId");
           setUser(null);
         })
@@ -61,14 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (userId: string, username: string, role: string) => {
-    console.log(`[AUTH] Login called - userId: ${userId}, username: ${username}, role: ${role}`);
     localStorage.setItem("userId", userId);
     setUser({
       id: userId,
       username,
       role,
     });
-    console.log(`[AUTH] User state set, redirecting to /`);
     // Use setTimeout to ensure state update has propagated before redirect
     setTimeout(() => {
       setLocation("/");
@@ -76,7 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    console.log(`[AUTH] Logout called - clearing session`);
     localStorage.removeItem("userId");
     setUser(null);
     setLocation("/login");

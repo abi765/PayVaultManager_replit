@@ -147,6 +147,25 @@ export const locationLogs = pgTable("location_logs", {
   timestampIdx: index("location_logs_timestamp_idx").on(table.timestamp),
 }));
 
+export const activityLogs = pgTable("activity_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: text("user_id").notNull(),
+  username: text("username").notNull(),
+  role: text("role").notNull(),
+  action: text("action").notNull(),
+  entity: text("entity").notNull(),
+  entityId: text("entity_id"),
+  details: text("details"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index("activity_logs_user_id_idx").on(table.userId),
+  actionIdx: index("activity_logs_action_idx").on(table.action),
+  entityIdx: index("activity_logs_entity_idx").on(table.entity),
+  timestampIdx: index("activity_logs_timestamp_idx").on(table.timestamp),
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -251,6 +270,18 @@ export const insertLocationLogSchema = z.object({
   purpose: z.string().nullable().optional(),
 });
 
+export const insertActivityLogSchema = z.object({
+  userId: z.string(),
+  username: z.string(),
+  role: z.string(),
+  action: z.enum(["LOGIN", "LOGOUT", "CREATE", "UPDATE", "DELETE", "PROCESS", "GENERATE", "EXPORT", "VIEW"]),
+  entity: z.string(),
+  entityId: z.string().nullable().optional(),
+  details: z.string().nullable().optional(),
+  ipAddress: z.string().nullable().optional(),
+  userAgent: z.string().nullable().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Department = typeof departments.$inferSelect;
@@ -272,3 +303,6 @@ export type InsertOvertimeRecord = z.infer<typeof insertOvertimeRecordSchema>;
 export type SalaryBreakdown = typeof salaryBreakdown.$inferSelect;
 export type InsertSalaryBreakdown = z.infer<typeof insertSalaryBreakdownSchema>;
 export type LocationLog = typeof locationLogs.$inferSelect;
+export type InsertLocationLog = z.infer<typeof insertLocationLogSchema>;
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;

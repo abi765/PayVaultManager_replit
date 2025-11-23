@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { requireAuth, requireRole } from "./auth";
@@ -17,38 +17,70 @@ import {
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
+// Helper function to log user activities
+async function logActivity(
+  req: Request,
+  action: "LOGIN" | "LOGOUT" | "CREATE" | "UPDATE" | "DELETE" | "PROCESS" | "GENERATE" | "EXPORT" | "VIEW",
+  entity: string,
+  entityId?: string,
+  details?: object
+) {
+  try {
+    const user = req.user;
+    if (!user) return;
+
+    await storage.createActivityLog({
+      userId: user.id,
+      username: user.username,
+      role: user.role,
+      action,
+      entity,
+      entityId: entityId || null,
+      details: details ? JSON.stringify(details) : null,
+      ipAddress: req.ip || req.socket.remoteAddress || null,
+      userAgent: req.headers["user-agent"] || null,
+    });
+  } catch (error) {
+    console.error("[AUDIT] Failed to log activity:", error);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
 
-      console.log(`[LOGIN] Attempt for username: "${username}"`);
-
       if (!username || !password) {
-        console.log(`[LOGIN] Missing credentials - username: ${!!username}, password: ${!!password}`);
         return res.status(400).json({ message: "Username and password are required" });
       }
 
       const user = await storage.getUserByUsername(username);
 
       if (!user) {
-        console.log(`[LOGIN] User not found: "${username}"`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
-
-      console.log(`[LOGIN] User found: "${username}" (${user.id}), role: ${user.role}`);
 
       const passwordMatch = await bcrypt.compare(password, user.password);
       if (!passwordMatch) {
-        console.log(`[LOGIN] Password mismatch for user: "${username}"`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      console.log(`[LOGIN] Success for user: "${username}"`);
+      // Log login activity
+      await storage.createActivityLog({
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        action: "LOGIN",
+        entity: "user",
+        entityId: user.id,
+        details: null,
+        ipAddress: req.ip || req.socket.remoteAddress || null,
+        userAgent: req.headers["user-agent"] || null,
+      });
+
       res.json({ userId: user.id, username: user.username, role: user.role });
     } catch (error: any) {
-      console.log(`[LOGIN] Error:`, error.message);
       res.status(500).json({ message: error.message });
     }
   });
@@ -85,6 +117,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...validation.data,
         password: hashedPassword,
       });
+
+      await logActivity(req, "CREATE", "user", user.id, { username: user.username, role: user.role });
+
       res.status(201).json(user);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -94,10 +129,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/users/:id", requireAuth, requireRole("admin"), async (req, res) => {
     try {
       const id = req.params.id;
+      const user = await storage.getUser(id);
       const success = await storage.deleteUser(id);
       if (!success) {
         return res.status(404).json({ message: "User not found" });
       }
+
+      await logActivity(req, "DELETE", "user", id, { username: user?.username });
+
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -210,6 +249,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const employee = await storage.createEmployee(validation.data);
+
+      await logActivity(req, "CREATE", "employee", employee.id.toString(), {
+        employeeId: employee.employeeId,
+        name: employee.fullName
+      });
+
       res.status(201).json(employee);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -247,6 +292,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const employee = await storage.updateEmployee(id, validation.data);
+
+      await logActivity(req, "UPDATE", "employee", id.toString(), {
+        employeeId: employee?.employeeId,
+        name: employee?.fullName,
+        changes: Object.keys(validation.data)
+      });
+
       res.json(employee);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -256,11 +308,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/employees/:id", requireAuth, requireRole("admin", "manager"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const deleted = await storage.deleteEmployee(id);
-      
-      if (!deleted) {
+      const employee = await storage.getEmployeeById(id);
+
+      if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
+
+      // Delete related records first (cascade delete)
+      // Get and delete employee deductions
+      const empDeductions = await storage.getEmployeeDeductions(id);
+      for (const ded of empDeductions) {
+        await storage.deleteEmployeeDeduction(ded.id);
+      }
+
+      // Get and delete employee allowances
+      const empAllowances = await storage.getEmployeeAllowances(id);
+      for (const allow of empAllowances) {
+        await storage.deleteEmployeeAllowance(allow.id);
+      }
+
+      // Get and delete overtime records
+      const overtimeRecords = await storage.getOvertimeRecords({ employeeId: id });
+      for (const ot of overtimeRecords) {
+        await storage.deleteOvertimeRecord(ot.id);
+      }
+
+      // Get and delete salary payments (this also deletes breakdown)
+      const { payments } = await storage.getSalaryPayments({ employeeId: id });
+      for (const payment of payments) {
+        await storage.deleteSalaryPayment(payment.id);
+      }
+
+      // Now delete the employee
+      const deleted = await storage.deleteEmployee(id);
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Failed to delete employee" });
+      }
+
+      await logActivity(req, "DELETE", "employee", id.toString(), {
+        employeeId: employee.employeeId,
+        name: employee.fullName
+      });
 
       res.json({ message: "Employee deleted successfully" });
     } catch (error: any) {
@@ -344,7 +433,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created.push(payment);
       }
 
-      res.status(201).json({ 
+      await logActivity(req, "GENERATE", "salary", null, {
+        month,
+        count: created.length,
+        skipped: skipped.length
+      });
+
+      res.status(201).json({
         message: `Generated ${created.length} salary records for ${month}${skipped.length > 0 ? `, skipped ${skipped.length} duplicates` : ''}`,
         count: created.length,
         skipped: skipped.length,
@@ -408,10 +503,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const payment = await storage.updateSalaryPayment(id, validation.data);
-      
+
       if (!payment) {
         return res.status(404).json({ message: "Salary payment not found" });
       }
+
+      // Log as PROCESS if marking as paid, otherwise UPDATE
+      const action = validation.data.status === "paid" ? "PROCESS" : "UPDATE";
+      await logActivity(req, action, "salary", id.toString(), {
+        status: payment.status,
+        amount: payment.amount,
+        month: payment.month
+      });
 
       res.json(payment);
     } catch (error: any) {
@@ -427,6 +530,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Salary payment not found" });
       }
+
+      await logActivity(req, "DELETE", "salary", id.toString());
 
       res.json({ message: "Salary payment deleted successfully" });
     } catch (error: any) {
@@ -492,6 +597,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Deduction not found" });
       }
+
+      await logActivity(req, "DELETE", "deduction", id.toString());
+
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -546,6 +654,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Allowance not found" });
       }
+
+      await logActivity(req, "DELETE", "allowance", id.toString());
+
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -612,6 +723,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Department not found" });
       }
+
+      await logActivity(req, "DELETE", "department", id.toString());
+
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -740,6 +854,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Overtime record not found" });
       }
+
+      await logActivity(req, "DELETE", "overtime", id.toString());
+
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -791,6 +908,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const logs = await storage.getLocationLogs({ employeeId, limit });
       res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Activity Logs routes (Admin only)
+  app.get("/api/activity-logs", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      const userId = req.query.userId as string | undefined;
+      const action = req.query.action as string | undefined;
+      const entity = req.query.entity as string | undefined;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const search = req.query.search as string | undefined;
+
+      const result = await storage.getActivityLogs({
+        limit,
+        offset,
+        userId,
+        action,
+        entity,
+        startDate,
+        endDate,
+        search,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/activity-logs/export", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const userId = req.query.userId as string | undefined;
+      const action = req.query.action as string | undefined;
+      const entity = req.query.entity as string | undefined;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+      const result = await storage.getActivityLogs({
+        limit: 10000,
+        offset: 0,
+        userId,
+        action,
+        entity,
+        startDate,
+        endDate,
+      });
+
+      // Generate CSV
+      const headers = ["Timestamp", "User", "Role", "Action", "Entity", "Entity ID", "Details", "IP Address"];
+      const csvRows = [headers.join(",")];
+
+      for (const log of result.logs) {
+        const row = [
+          log.timestamp ? new Date(log.timestamp).toISOString() : "",
+          log.username,
+          log.role,
+          log.action,
+          log.entity,
+          log.entityId || "",
+          `"${(log.details || "").replace(/"/g, '""')}"`,
+          log.ipAddress || "",
+        ];
+        csvRows.push(row.join(","));
+      }
+
+      const csv = csvRows.join("\n");
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename=activity-logs-${new Date().toISOString().split("T")[0]}.csv`);
+      res.send(csv);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
